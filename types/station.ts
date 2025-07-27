@@ -14,7 +14,8 @@ export interface Exit {
 export interface StationNumbering {
   letter: string;     // Line letter (e.g., "JY")
   number: string;     // Station number (e.g., "01")
-  type: 'JRE' | 'Subway';
+  color: string;      // Color code for the line
+  type: 'JRE' | 'Subway' | 'Shinkansen700' | 'ShinkansenE5';
 }
 
 export interface PlatformObject {
@@ -32,7 +33,6 @@ export interface Platform {
   id: number;                     // Unique platform ID
   name: Name;                     // Platform name in multiple languages
   doorside: 'Left' | 'Right';     // Side where doors open
-  numberings: StationNumbering[], // List of station numberings
   blocks: PlatformBlock[];        // List of platform blocks
 }
 

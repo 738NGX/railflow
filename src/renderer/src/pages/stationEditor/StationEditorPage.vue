@@ -215,7 +215,6 @@ function addPlatform() {
       english: 'New Platform'
     },
     doorside: 'Left' as const,
-    numberings: [],
     blocks: []
   }
 
@@ -234,26 +233,6 @@ function removePlatform(platformId: number) {
     isDirty.value = true
     projectStore.setUnsavedChanges(true)
   }
-}
-
-// 添加站台编号
-function addPlatformNumbering(platform: Station['platforms'][0]) {
-  const newNumbering = {
-    letter: 'JY',
-    number: '01',
-    type: 'JRE' as const
-  }
-
-  platform.numberings.push(newNumbering)
-  isDirty.value = true
-  projectStore.setUnsavedChanges(true)
-}
-
-// 删除站台编号
-function removePlatformNumbering(platform: Station['platforms'][0], index: number) {
-  platform.numberings.splice(index, 1)
-  isDirty.value = true
-  projectStore.setUnsavedChanges(true)
 }
 
 // 监听isDirty变化，同步到全局状态
@@ -324,26 +303,11 @@ onMounted(() => {
     <el-aside width="400px" class="border-r">
       <div class="p-4">
         <!-- 搜索框 -->
-        <el-input
-          v-model="searchQuery"
-          placeholder="搜索车站..."
-          :prefix-icon="Search"
-          class="mb-4"
-        />
+        <el-input v-model="searchQuery" placeholder="搜索车站..." :prefix-icon="Search" class="mb-4" />
 
         <!-- 标签筛选器 -->
-        <el-select
-          v-model="selectedTagFilter"
-          placeholder="按标签筛选"
-          clearable
-          class="mb-4 w-full"
-        >
-          <el-option
-            v-for="tag in availableTags"
-            :key="tag"
-            :label="tag"
-            :value="tag"
-          />
+        <el-select v-model="selectedTagFilter" placeholder="按标签筛选" clearable class="mb-4 w-full">
+          <el-option v-for="tag in availableTags" :key="tag" :label="tag" :value="tag" />
         </el-select>
 
         <!-- 操作按钮 -->
@@ -358,9 +322,7 @@ onMounted(() => {
 
         <!-- 车站表格 -->
         <el-table
-          :data="filteredStations"
-          height="calc(100vh - 300px)"
-          highlight-current-row
+          :data="filteredStations" height="calc(100vh - 300px)" highlight-current-row
           @row-click="selectStation"
         >
           <el-table-column prop="name.kanji" label="车站名称" />
@@ -376,12 +338,7 @@ onMounted(() => {
           </el-table-column>
           <el-table-column label="操作" width="80">
             <template #default="{ row }">
-              <el-button
-                size="small"
-                type="danger"
-                :icon="Delete"
-                @click.stop="deleteStation(row)"
-              />
+              <el-button size="small" type="danger" :icon="Delete" @click.stop="deleteStation(row)" />
             </template>
           </el-table-column>
         </el-table>
@@ -401,31 +358,39 @@ onMounted(() => {
           <el-form label-position="top">
             <div class="grid grid-cols-2 gap-4">
               <el-form-item label="日文名称">
-                <el-input v-model="selectedStation.name.kanji" @input="isDirty = true; projectStore.setUnsavedChanges(true)" />
+                <el-input
+                  v-model="selectedStation.name.kanji"
+                  @input="isDirty = true; projectStore.setUnsavedChanges(true)"
+                />
               </el-form-item>
               <el-form-item label="英文名称">
-                <el-input v-model="selectedStation.name.english" @input="isDirty = true; projectStore.setUnsavedChanges(true)" />
+                <el-input
+                  v-model="selectedStation.name.english"
+                  @input="isDirty = true; projectStore.setUnsavedChanges(true)"
+                />
               </el-form-item>
               <el-form-item label="中文名称">
-                <el-input v-model="selectedStation.name.chinese" @input="isDirty = true; projectStore.setUnsavedChanges(true)" />
+                <el-input
+                  v-model="selectedStation.name.chinese"
+                  @input="isDirty = true; projectStore.setUnsavedChanges(true)"
+                />
               </el-form-item>
               <el-form-item label="站点代码">
-                <el-input v-model="selectedStation.name.code" @input="isDirty = true; projectStore.setUnsavedChanges(true)" />
+                <el-input
+                  v-model="selectedStation.name.code"
+                  @input="isDirty = true; projectStore.setUnsavedChanges(true)"
+                />
               </el-form-item>
             </div>
             <el-form-item label="更新时间">
               <div class="flex gap-2">
                 <el-input-number
-                  v-model="selectedStation.update.year"
-                  :min="2000"
-                  :max="2100"
+                  v-model="selectedStation.update.year" :min="2000" :max="2100"
                   @change="isDirty = true; projectStore.setUnsavedChanges(true)"
                 />
                 <span>年</span>
                 <el-input-number
-                  v-model="selectedStation.update.month"
-                  :min="1"
-                  :max="12"
+                  v-model="selectedStation.update.month" :min="1" :max="12"
                   @change="isDirty = true; projectStore.setUnsavedChanges(true)"
                 />
                 <span>月</span>
@@ -443,11 +408,7 @@ onMounted(() => {
             </div>
           </template>
           <el-collapse v-if="selectedStation.exits.length > 0">
-            <el-collapse-item
-              v-for="exit in selectedStation.exits"
-              :key="exit.id"
-              :name="exit.id.toString()"
-            >
+            <el-collapse-item v-for="exit in selectedStation.exits" :key="exit.id" :name="exit.id.toString()">
               <template #title>
                 <span>出口 {{ exit.id }}: {{ exit.name.kanji }}</span>
               </template>
@@ -457,10 +418,16 @@ onMounted(() => {
                     <el-input v-model="exit.name.kanji" @input="isDirty = true; projectStore.setUnsavedChanges(true)" />
                   </el-form-item>
                   <el-form-item label="英文名称">
-                    <el-input v-model="exit.name.english" @input="isDirty = true; projectStore.setUnsavedChanges(true)" />
+                    <el-input
+                      v-model="exit.name.english"
+                      @input="isDirty = true; projectStore.setUnsavedChanges(true)"
+                    />
                   </el-form-item>
                   <el-form-item label="中文名称">
-                    <el-input v-model="exit.name.chinese" @input="isDirty = true; projectStore.setUnsavedChanges(true)" />
+                    <el-input
+                      v-model="exit.name.chinese"
+                      @input="isDirty = true; projectStore.setUnsavedChanges(true)"
+                    />
                   </el-form-item>
                 </div>
                 <el-button type="danger" size="small" @click="removeExit(exit.id)">
@@ -484,8 +451,7 @@ onMounted(() => {
           </template>
           <el-collapse v-if="selectedStation.platforms.length > 0">
             <el-collapse-item
-              v-for="platform in selectedStation.platforms"
-              :key="platform.id"
+              v-for="platform in selectedStation.platforms" :key="platform.id"
               :name="platform.id.toString()"
             >
               <template #title>
@@ -494,10 +460,16 @@ onMounted(() => {
               <el-form label-position="top">
                 <div class="grid grid-cols-2 gap-4 mb-4">
                   <el-form-item label="日文名称">
-                    <el-input v-model="platform.name.kanji" @input="isDirty = true; projectStore.setUnsavedChanges(true)" />
+                    <el-input
+                      v-model="platform.name.kanji"
+                      @input="isDirty = true; projectStore.setUnsavedChanges(true)"
+                    />
                   </el-form-item>
                   <el-form-item label="英文名称">
-                    <el-input v-model="platform.name.english" @input="isDirty = true; projectStore.setUnsavedChanges(true)" />
+                    <el-input
+                      v-model="platform.name.english"
+                      @input="isDirty = true; projectStore.setUnsavedChanges(true)"
+                    />
                   </el-form-item>
                 </div>
 
@@ -506,52 +478,6 @@ onMounted(() => {
                     <el-option label="左侧" value="Left" />
                     <el-option label="右侧" value="Right" />
                   </el-select>
-                </el-form-item>
-
-                <!-- 站台编号 -->
-                <el-form-item label="站台编号">
-                  <div class="space-y-2">
-                    <div
-                      v-for="(numbering, index) in platform.numberings"
-                      :key="index"
-                      class="flex gap-2 items-center"
-                    >
-                      <el-input
-                        v-model="numbering.letter"
-                        placeholder="线路字母"
-                        style="width: 100px"
-                        @input="isDirty = true; projectStore.setUnsavedChanges(true)"
-                      />
-                      <el-input
-                        v-model="numbering.number"
-                        placeholder="编号"
-                        style="width: 100px"
-                        @input="isDirty = true; projectStore.setUnsavedChanges(true)"
-                      />
-                      <el-select
-                        v-model="numbering.type"
-                        style="width: 120px"
-                        @change="isDirty = true; projectStore.setUnsavedChanges(true)"
-                      >
-                        <el-option label="JRE" value="JRE" />
-                        <el-option label="Subway" value="Subway" />
-                      </el-select>
-                      <el-button
-                        type="danger"
-                        size="small"
-                        @click="removePlatformNumbering(platform, index)"
-                      >
-                        删除
-                      </el-button>
-                    </div>
-                    <el-button
-                      type="primary"
-                      size="small"
-                      @click="addPlatformNumbering(platform)"
-                    >
-                      添加编号
-                    </el-button>
-                  </div>
                 </el-form-item>
 
                 <el-button type="danger" size="small" @click="removePlatform(platform.id)">
