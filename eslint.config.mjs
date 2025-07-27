@@ -1,5 +1,4 @@
 import tseslint from '@electron-toolkit/eslint-config-ts'
-import eslintConfigPrettier from '@electron-toolkit/eslint-config-prettier'
 import eslintPluginVue from 'eslint-plugin-vue'
 import vueParser from 'vue-eslint-parser'
 
@@ -25,6 +24,9 @@ export default tseslint.config(
     rules: {
       'vue/require-default-prop': 'off',
       'vue/multi-word-component-names': 'off',
+      'vue/max-attributes-per-line': 'off',
+      'vue/singleline-html-element-content-newline': 'off',
+      '@typescript-eslint/explicit-function-return-type': 'off',
       'vue/block-lang': [
         'error',
         {
@@ -34,6 +36,5 @@ export default tseslint.config(
         }
       ]
     }
-  },
-  eslintConfigPrettier
+  }
 )

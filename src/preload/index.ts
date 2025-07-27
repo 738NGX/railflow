@@ -1,8 +1,16 @@
-import { contextBridge } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
+import { Station } from '../../types/station'
 
 // Custom APIs for renderer
-const api = {}
+const api = {
+  getProjects: () => ipcRenderer.invoke('get-projects'),
+  addProject: (projectName: string) => ipcRenderer.invoke('add-project', projectName),
+  deleteProject: (projectId: string) => ipcRenderer.invoke('delete-project', projectId),
+  updateProject: (projectId: string, projectData: { name: string }) => ipcRenderer.invoke('update-project', projectId, projectData),
+  getStations: (projectId: string) => ipcRenderer.invoke('get-stations', projectId),
+  saveStations: (projectId: string, stations: Station[]) => ipcRenderer.invoke('save-stations', projectId, stations)
+}
 
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise
