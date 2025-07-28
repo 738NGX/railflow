@@ -67,7 +67,7 @@
       {
         "id": 0,
         "name": {
-          "kanji": "4番線 山手線 内回り",
+          "kanji": "4番線 山手線 外回り",
           "english": "Platform 4"
         },
         "doorside": "Left",
