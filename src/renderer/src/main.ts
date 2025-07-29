@@ -1,3 +1,4 @@
+import 'pixi.js/unsafe-eval';
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
@@ -17,7 +18,6 @@ app.use(ElementPlus)
 
 // 将 store 暴露到全局，供主进程访问
 const projectStore = useProjectStore()
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 ;(window as any).projectStore = projectStore
 
 app.mount('#app')

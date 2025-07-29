@@ -27,6 +27,7 @@ export default tseslint.config(
       'vue/max-attributes-per-line': 'off',
       'vue/singleline-html-element-content-newline': 'off',
       '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
       'vue/block-lang': [
         'error',
         {

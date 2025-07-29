@@ -215,7 +215,7 @@ onMounted(() => {
 
   <el-container v-else style="height: calc(100vh - 60px);">
     <!-- 左侧边栏：车站列表 -->
-    <el-aside width="400px" class="border-r">
+    <el-aside width="400px" class="shadow-lg">
       <StationList
         v-model:search-query="searchQuery"
         v-model:selected-tag-filter="selectedTagFilter"

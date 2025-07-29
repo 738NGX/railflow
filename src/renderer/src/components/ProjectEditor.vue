@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import Project from 'src/utils/project'
+import Project from '../../../../types/project'
 import { ElInput, ElButton, ElMessage } from 'element-plus'
 
 const props = defineProps<{
