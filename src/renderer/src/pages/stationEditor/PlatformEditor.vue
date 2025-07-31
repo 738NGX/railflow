@@ -101,30 +101,23 @@
     </div>
 
     <el-form label-position="top">
-      <div class="grid grid-cols-2 gap-4 mb-4">
+      <div class="grid grid-cols-[3fr_1fr] gap-4 mb-4">
         <el-form-item label="日文名称">
           <el-input
             :model-value="platform.name.kanji"
             @input="updateName('kanji', $event)"
           />
         </el-form-item>
-        <el-form-item label="英文名称">
-          <el-input
-            :model-value="platform.name.english"
-            @input="updateName('english', $event)"
-          />
+        <el-form-item label="车门开启方向">
+          <el-select
+            :model-value="platform.doorside"
+            @change="updateDoorside($event)"
+          >
+            <el-option label="左侧" value="Left" />
+            <el-option label="右侧" value="Right" />
+          </el-select>
         </el-form-item>
       </div>
-
-      <el-form-item label="车门开启方向">
-        <el-select
-          :model-value="platform.doorside"
-          @change="updateDoorside($event)"
-        >
-          <el-option label="左侧" value="Left" />
-          <el-option label="右侧" value="Right" />
-        </el-select>
-      </el-form-item>
 
       <!-- 出口显示管理 -->
       <el-form-item label="出口显示">
@@ -145,7 +138,7 @@
               </el-button>
             </div>
 
-            <div class="grid grid-cols-4 gap-2 mb-3">
+            <div class="grid grid-cols-[2fr_1fr_1fr_1fr] gap-2 mb-3">
               <el-form-item label="关联出口">
                 <el-select
                   :model-value="exitDisplay.id"
@@ -160,33 +153,35 @@
                 </el-select>
               </el-form-item>
 
-              <el-form-item label="起始X坐标">
+              <el-form-item label="显示起始X坐标(0-936)">
                 <el-input-number
                   :model-value="exitDisplay.start"
                   :min="0"
                   :max="Math.min(exitDisplay.end - 1, 934)"
+                  class="!w-full"
                   @update:model-value="updateExitDisplayStart(exitIndex, $event)"
                 />
               </el-form-item>
 
-              <el-form-item label="结束X坐标">
+              <el-form-item label="显示结束X坐标(0-936)">
                 <el-input-number
                   :model-value="exitDisplay.end"
                   :min="exitDisplay.start + 1"
                   :max="935"
+                  class="!w-full"
                   @update:model-value="updateExitDisplayEnd(exitIndex, $event)"
                 />
               </el-form-item>
 
-              <el-form-item label="位置">
+              <el-form-item label="显示位置">
                 <el-select
                   :model-value="exitDisplay.pos"
                   @change="updateExitDisplayPos(exitIndex, $event)"
                 >
-                  <el-option label="前部" value="Front" />
-                  <el-option label="中部" value="Center" />
-                  <el-option label="后部" value="Back" />
-                  <el-option label="边界" value="Border" />
+                  <el-option label="站台近侧" value="Front" />
+                  <el-option label="站台中部" value="Center" />
+                  <el-option label="站台远部" value="Back" />
+                  <el-option label="站台边界" value="Border" />
                 </el-select>
               </el-form-item>
             </div>

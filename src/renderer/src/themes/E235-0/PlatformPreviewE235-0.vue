@@ -1,7 +1,9 @@
 <script lang="ts" setup>
-import { Application, Graphics, Text } from 'pixi.js';
+import { Application, Graphics, Text, Sprite } from 'pixi.js';
 import { onMounted, onUnmounted, ref, computed, watch } from 'vue';
 import type { Platform, Exit } from '../../../../../types/station';
+import { assetLoader } from '../../utils/assetLoader';
+import { SVG_ASSETS_ARRAY } from '../../utils/svgAssets';
 
 interface Props {
   platform?: Platform;
@@ -49,6 +51,7 @@ const exit_back_y = computed(() => isDoorOpen.value ? 50 : 135);
 
 let app: Application;
 let resizeObserver: ResizeObserver;
+let textures: any = null; // 缓存加载的纹理
 
 const scaleCanvas = () => {
   if (!canvasContainer.value || !app) return;
@@ -67,8 +70,15 @@ const textConfig = {
   door_opposite_open: { kanji: '反対側のドアが開きます', english: 'Doors on the opposite side will open.' }
 }
 
-const drawScene = () => {
+const drawScene = (loadedTextures?: any) => {
   if (!app) return;
+
+  // 使用传入的纹理或缓存的纹理
+  const currentTextures = loadedTextures || textures;
+  if (!currentTextures) {
+    console.warn('Textures not loaded yet');
+    return;
+  }
 
   // 清除之前的内容
   app.stage.removeChildren();
@@ -78,33 +88,6 @@ const drawScene = () => {
     .rect(0, 45, CANVAS_WIDTH, 140)
     .fill(0xC0C9D0);
   app.stage.addChild(platform);
-
-  const platformTopDashedLine = new Graphics();
-  platformTopDashedLine.setStrokeStyle({
-    width: 3,
-    color: 0xE0E080,
-  });
-  for (let x = 0; x < CANVAS_WIDTH; x += 18) {
-    platformTopDashedLine
-      .moveTo(x, 55)
-      .lineTo(Math.min(x + 10, CANVAS_WIDTH), 55);
-  }
-  platformTopDashedLine.stroke();
-  app.stage.addChild(platformTopDashedLine);
-
-  const platformBottomDashedLine = new Graphics();
-  platformBottomDashedLine.setStrokeStyle({
-    width: 3,
-    color: 0xE0E080,
-  });
-  for (let x = 0; x < CANVAS_WIDTH; x += 18) {
-    platformBottomDashedLine
-      .moveTo(x, 175)
-      .lineTo(Math.min(x + 10, CANVAS_WIDTH), 175);
-  }
-  platformBottomDashedLine.stroke();
-  app.stage.addChild(platformBottomDashedLine);
-
   const platformBase = new Graphics()
     .rect(0, 185, CANVAS_WIDTH, 10)
     .fill(0x607080);
@@ -258,6 +241,58 @@ const drawScene = () => {
     app.stage.addChild(rightArrow);
   }
 
+  const unitsNum = props.platform?.units?.length || 0;
+  props.platform?.units.forEach((unit, index) => {
+    const unitX = 12 + (index + 0.5) * (936 / unitsNum);
+    if (unit.objects.length === 1) {
+      if (unit.objects[0].type === 'DownStairs' || unit.objects[0].type === 'DownEscalator') {
+        const unitY = 125
+        const base = new Graphics()
+          .rect(unitX - 17.5, unitY, 35, 30)
+          .fill(0x808080);
+        app.stage.addChild(base);
+        const obj = unit.objects[0].type === 'DownStairs' ? new Sprite(currentTextures.downStairs) : new Sprite(currentTextures.downEscalator);
+        obj.anchor.set(0.5, 0);
+        obj.x = unitX;
+        obj.y = unitY;
+        const aspect_ratio = obj.texture.width / obj.texture.height;
+        obj.width = 35;
+        obj.height = obj.width / aspect_ratio;
+        app.stage.addChild(obj);
+        const cover = new Graphics()
+          .rect(unitX - 17.5, 150, 35, 30)
+          .fill(0xC0C9D0);
+        app.stage.addChild(cover);
+      }
+    }
+  });
+
+  // 站台黄线
+  const platformTopDashedLine = new Graphics();
+  platformTopDashedLine.setStrokeStyle({
+    width: 3,
+    color: 0xE0E080,
+  });
+  for (let x = 0; x < CANVAS_WIDTH; x += 18) {
+    platformTopDashedLine
+      .moveTo(x, 55)
+      .lineTo(Math.min(x + 10, CANVAS_WIDTH), 55);
+  }
+  platformTopDashedLine.stroke();
+  app.stage.addChild(platformTopDashedLine);
+  const platformBottomDashedLine = new Graphics();
+  platformBottomDashedLine.setStrokeStyle({
+    width: 3,
+    color: 0xE0E080,
+  });
+  for (let x = 0; x < CANVAS_WIDTH; x += 18) {
+    platformBottomDashedLine
+      .moveTo(x, 175)
+      .lineTo(Math.min(x + 10, CANVAS_WIDTH), 175);
+  }
+  platformBottomDashedLine.stroke();
+  app.stage.addChild(platformBottomDashedLine);
+
   // 出口位置提示
   props.platform?.exits.forEach(
     (exit) => {
@@ -268,7 +303,7 @@ const drawScene = () => {
         exit.pos === 'Center' ? exit_center_y.value :
           exit.pos === 'Back' ? exit_back_y.value : exit_border_y.value;
 
-          const exitContainer = new Graphics()
+      const exitContainer = new Graphics()
         .rect(exit_x, exit_y, exit.end - exit.start, 36)
         .fill(0xF0F000)
         .stroke({ width: 1, color: 0x000000 });
@@ -341,13 +376,19 @@ onMounted(async () => {
 
   app = new Application();
 
+  // 使用全局资源管理器批量加载资源
+  const loadedTextures = await assetLoader.loadMultipleTextures(SVG_ASSETS_ARRAY);
+
+  // 为了兼容现有代码，保持 ds_texture 命名
+  textures = loadedTextures
+
   await app.init({
     background: '#ffffff',
     width: CANVAS_WIDTH,
     height: CANVAS_HEIGHT.value,
   });
 
-  drawScene();
+  drawScene(textures); // 首次绘制时传入纹理
 
   canvasContainer.value.appendChild(app.canvas);
   scaleCanvas();
