@@ -22,18 +22,22 @@ export interface PlatformObject {
   type: 'DownStairs' | 'UpStairs' | 'DownEscalator' | 'UpEscalator' | 'Elevator';
   direction: 'Front' | 'Opposite'
   pos: 'Front' | 'Center' | 'Back';
+  linkedExit: number | undefined; // Exit ID this object is linked to, if any
 }
 
-export interface PlatformBlock {
-  exit: number;                           // Exit ID this block is associated with
-  units: { objects: PlatformObject[] }[]; // List of platform units with objects
+export interface ExitDisplay {
+  id: number;     // linked to exit info
+  start: number;  // Should start at which x, range is [0,  end)
+  end: number;    // should end at which x, range is (start, 935]
+  pos: 'Front' | 'Center' | 'Back' | 'Border';
 }
 
 export interface Platform {
   id: number;                     // Unique platform ID
   name: Name;                     // Platform name in multiple languages
   doorside: 'Left' | 'Right';     // Side where doors open
-  blocks: PlatformBlock[];        // List of platform blocks
+  exits: ExitDisplay[];                   // Exit Display information for the platform block
+  units: { objects: PlatformObject[] }[]; // List of platform units with objects
 }
 
 export interface Station {

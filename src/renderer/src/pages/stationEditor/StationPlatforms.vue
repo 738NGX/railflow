@@ -59,7 +59,8 @@ function addPlatform() {
       english: 'New Platform'
     },
     doorside: 'Left',
-    blocks: []
+    exits: [],
+    units: []
   }
 
   const updatedStation = {

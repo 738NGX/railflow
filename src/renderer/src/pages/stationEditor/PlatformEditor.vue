@@ -5,19 +5,69 @@
       <div class="flex justify-between items-center mb-3">
         <h4 class="text-sm font-medium">站台布局预览</h4>
 
-        <!-- 车型切换接口 -->
-        <div class="flex items-center gap-2">
-          <span class="text-xs text-gray-600">预览车型:</span>
-          <el-select
-            v-model="selectedTrainType"
-            size="small"
-            placeholder="选择车型"
-            style="width: 120px"
-          >
-            <el-option label="E235-0系" value="E235-0" />
-            <!-- 未来车型预留 -->
-            <!-- <el-option label="E235-1000系" value="E235-1000" disabled /> -->
-          </el-select>
+        <!-- 预览控制选项 -->
+        <div class="flex items-center gap-4">
+          <!-- 车型选择 -->
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-gray-600">预览车型:</span>
+            <el-select
+              v-model="selectedTrainType"
+              size="small"
+              placeholder="选择车型"
+              style="width: 120px"
+            >
+              <el-option label="E235-0系" value="E235-0" />
+              <!-- 未来车型预留 -->
+              <!-- <el-option label="E235-1000系" value="E235-1000" disabled /> -->
+            </el-select>
+          </div>
+
+          <!-- 屏幕侧边 -->
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-gray-600">屏幕侧:</span>
+            <el-select
+              v-model="previewScreenSide"
+              size="small"
+              placeholder="选择侧边"
+              style="width: 80px"
+            >
+              <el-option label="左侧" value="Left" />
+              <el-option label="右侧" value="Right" />
+            </el-select>
+          </div>
+
+          <!-- 车厢编号方向 -->
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-gray-600">编号方向:</span>
+            <el-select
+              v-model="previewCarNumberDirection"
+              size="small"
+              placeholder="选择方向"
+              style="width: 80px"
+            >
+              <el-option label="正向" value="Front" />
+              <el-option label="反向" value="Opposite" />
+            </el-select>
+          </div>
+
+          <!-- 当前车厢 -->
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-gray-600">当前车厢:</span>
+            <el-select
+              v-model="previewCurrentCarNumber"
+              size="small"
+              placeholder="选择车厢"
+              style="width: 80px"
+              clearable
+            >
+              <el-option
+                v-for="carNum in 11"
+                :key="carNum"
+                :label="`${carNum}号`"
+                :value="carNum"
+              />
+            </el-select>
+          </div>
         </div>
       </div>
 
@@ -26,6 +76,9 @@
         v-if="selectedTrainType === 'E235-0'"
         :platform="platform"
         :exits="exits"
+        :screen-side="previewScreenSide"
+        :car-number-direction="previewCarNumberDirection"
+        :current-car-number="previewCurrentCarNumber"
         :enable-animations="enablePreviewAnimations"
         :show-debug-info="showDebugInfo"
         @object-click="handleObjectClick"
@@ -73,128 +126,176 @@
         </el-select>
       </el-form-item>
 
-      <!-- 站台块管理 -->
-      <el-form-item label="站台块">
+      <!-- 出口显示管理 -->
+      <el-form-item label="出口显示">
         <div class="space-y-4 w-full">
           <div
-            v-for="(block, blockIndex) in platform.blocks"
-            :key="blockIndex"
+            v-for="(exitDisplay, exitIndex) in (platform.exits || [])"
+            :key="exitIndex"
             class="border border-gray-200 rounded p-4"
           >
             <div class="flex justify-between items-center mb-3">
-              <h4 class="font-medium">块 {{ blockIndex + 1 }}</h4>
+              <h4 class="font-medium">出口显示 {{ exitIndex + 1 }}</h4>
               <el-button
                 type="danger"
                 size="small"
-                @click="removeBlock(blockIndex)"
+                @click="removeExitDisplay(exitIndex)"
               >
-                删除块
+                删除出口显示
               </el-button>
             </div>
 
-            <el-form-item label="关联出口" class="mb-3">
-              <el-select
-                :model-value="block.exit"
-                @change="updateBlockExit(blockIndex, $event)"
-              >
-                <el-option
-                  v-for="exit in exits"
-                  :key="exit.id"
-                  :label="`出口 ${exit.id}: ${exit.name.kanji}`"
-                  :value="exit.id"
-                />
-              </el-select>
-            </el-form-item>
+            <div class="grid grid-cols-4 gap-2 mb-3">
+              <el-form-item label="关联出口">
+                <el-select
+                  :model-value="exitDisplay.id"
+                  @change="updateExitDisplayId(exitIndex, $event)"
+                >
+                  <el-option
+                    v-for="exit in exits"
+                    :key="exit.id"
+                    :label="`出口 ${exit.id}: ${exit.name.kanji}`"
+                    :value="exit.id"
+                  />
+                </el-select>
+              </el-form-item>
 
-            <!-- 站台单元管理 -->
+              <el-form-item label="起始X坐标">
+                <el-input-number
+                  :model-value="exitDisplay.start"
+                  :min="0"
+                  :max="Math.min(exitDisplay.end - 1, 934)"
+                  @update:model-value="updateExitDisplayStart(exitIndex, $event)"
+                />
+              </el-form-item>
+
+              <el-form-item label="结束X坐标">
+                <el-input-number
+                  :model-value="exitDisplay.end"
+                  :min="exitDisplay.start + 1"
+                  :max="935"
+                  @update:model-value="updateExitDisplayEnd(exitIndex, $event)"
+                />
+              </el-form-item>
+
+              <el-form-item label="位置">
+                <el-select
+                  :model-value="exitDisplay.pos"
+                  @change="updateExitDisplayPos(exitIndex, $event)"
+                >
+                  <el-option label="前部" value="Front" />
+                  <el-option label="中部" value="Center" />
+                  <el-option label="后部" value="Back" />
+                  <el-option label="边界" value="Border" />
+                </el-select>
+              </el-form-item>
+            </div>
+          </div>
+
+          <el-button
+            type="primary"
+            size="small"
+            @click="addExitDisplay"
+          >
+            添加出口显示
+          </el-button>
+        </div>
+      </el-form-item>
+
+      <!-- 站台单元管理 -->
+      <el-form-item label="站台单元">
+        <div class="space-y-4 w-full">
+          <div
+            v-for="(unit, unitIndex) in (platform.units || [])"
+            :key="unitIndex"
+            class="border border-gray-200 rounded p-4"
+          >
+            <div class="flex justify-between items-center mb-3">
+              <h4 class="font-medium">单元 {{ unitIndex + 1 }}</h4>
+              <el-button
+                type="danger"
+                size="small"
+                @click="removeUnit(unitIndex)"
+              >
+                删除单元
+              </el-button>
+            </div>
+
+            <!-- 站台对象管理 -->
             <div class="mt-4">
               <div class="flex justify-between items-center mb-2">
-                <h5 class="text-sm font-medium">站台单元</h5>
+                <h5 class="text-sm font-medium">站台对象</h5>
                 <el-button
                   type="primary"
                   size="small"
-                  @click="addUnit(blockIndex)"
+                  @click="addObject(unitIndex)"
                 >
-                  添加单元
+                  添加对象
                 </el-button>
               </div>
 
               <div
-                v-for="(unit, unitIndex) in block.units"
-                :key="unitIndex"
+                v-for="(object, objectIndex) in unit.objects"
+                :key="objectIndex"
                 class="border border-gray-100 rounded p-3 mb-2"
               >
-                <div class="flex justify-between items-center mb-2">
-                  <h6 class="text-xs font-medium">单元 {{ unitIndex + 1 }}</h6>
+                <div class="flex gap-2 items-center mb-2">
+                  <el-select
+                    :model-value="object.type"
+                    placeholder="类型"
+                    class="w-32"
+                    @change="updateObjectType(unitIndex, objectIndex, $event)"
+                  >
+                    <el-option label="下楼梯" value="DownStairs" />
+                    <el-option label="上楼梯" value="UpStairs" />
+                    <el-option label="下扶梯" value="DownEscalator" />
+                    <el-option label="上扶梯" value="UpEscalator" />
+                    <el-option label="电梯" value="Elevator" />
+                  </el-select>
+
+                  <el-select
+                    :model-value="object.direction"
+                    placeholder="方向"
+                    class="w-24"
+                    @change="updateObjectDirection(unitIndex, objectIndex, $event)"
+                  >
+                    <el-option label="前方" value="Front" />
+                    <el-option label="对面" value="Opposite" />
+                  </el-select>
+
+                  <el-select
+                    :model-value="object.pos"
+                    placeholder="位置"
+                    class="w-24"
+                    @change="updateObjectPos(unitIndex, objectIndex, $event)"
+                  >
+                    <el-option label="前部" value="Front" />
+                    <el-option label="中部" value="Center" />
+                    <el-option label="后部" value="Back" />
+                  </el-select>
+
+                  <el-select
+                    :model-value="object.linkedExit"
+                    placeholder="关联出口"
+                    class="w-32"
+                    clearable
+                    @change="updateObjectLinkedExit(unitIndex, objectIndex, $event)"
+                  >
+                    <el-option
+                      v-for="exit in exits"
+                      :key="exit.id"
+                      :label="`出口 ${exit.id}: ${exit.name.kanji}`"
+                      :value="exit.id"
+                    />
+                  </el-select>
+
                   <el-button
                     type="danger"
                     size="small"
-                    @click="removeUnit(blockIndex, unitIndex)"
+                    @click="removeObject(unitIndex, objectIndex)"
                   >
-                    删除单元
+                    删除
                   </el-button>
-                </div>
-
-                <!-- 站台对象管理 -->
-                <div class="ml-3">
-                  <div class="flex justify-between items-center mb-2">
-                    <span class="text-xs">对象</span>
-                    <el-button
-                      type="primary"
-                      size="small"
-                      @click="addObject(blockIndex, unitIndex)"
-                    >
-                      添加对象
-                    </el-button>
-                  </div>
-
-                  <div
-                    v-for="(object, objectIndex) in unit.objects"
-                    :key="objectIndex"
-                    class="flex gap-2 items-center mb-2"
-                  >
-                    <el-select
-                      :model-value="object.type"
-                      placeholder="类型"
-                      class="w-32"
-                      @change="updateObjectType(blockIndex, unitIndex, objectIndex, $event)"
-                    >
-                      <el-option label="下楼梯" value="DownStairs" />
-                      <el-option label="上楼梯" value="UpStairs" />
-                      <el-option label="下扶梯" value="DownEscalator" />
-                      <el-option label="上扶梯" value="UpEscalator" />
-                      <el-option label="电梯" value="Elevator" />
-                    </el-select>
-
-                    <el-select
-                      :model-value="object.direction"
-                      placeholder="方向"
-                      class="w-24"
-                      @change="updateObjectDirection(blockIndex, unitIndex, objectIndex, $event)"
-                    >
-                      <el-option label="前方" value="Front" />
-                      <el-option label="对面" value="Opposite" />
-                    </el-select>
-
-                    <el-select
-                      :model-value="object.pos"
-                      placeholder="位置"
-                      class="w-24"
-                      @change="updateObjectPos(blockIndex, unitIndex, objectIndex, $event)"
-                    >
-                      <el-option label="前部" value="Front" />
-                      <el-option label="中部" value="Center" />
-                      <el-option label="后部" value="Back" />
-                    </el-select>
-
-                    <el-button
-                      type="danger"
-                      size="small"
-                      @click="removeObject(blockIndex, unitIndex, objectIndex)"
-                    >
-                      删除
-                    </el-button>
-                  </div>
                 </div>
               </div>
             </div>
@@ -203,9 +304,9 @@
           <el-button
             type="primary"
             size="small"
-            @click="addBlock"
+            @click="addUnit"
           >
-            添加站台块
+            添加单元
           </el-button>
         </div>
       </el-form-item>
@@ -219,12 +320,13 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import type { Exit, Platform, PlatformObject } from '../../../../../types/station'
+import type { Exit, Platform, PlatformObject, ExitDisplay } from '../../../../../types/station'
 import PlatformPreviewE235_0 from '../../themes/E235-0/PlatformPreviewE235-0.vue'
 import {
   ElForm,
   ElFormItem,
   ElInput,
+  ElInputNumber,
   ElSelect,
   ElOption,
   ElButton
@@ -249,6 +351,11 @@ const selectedTrainType = ref<string>('E235-0')
 // 预览配置
 const enablePreviewAnimations = ref(false)
 const showDebugInfo = ref(false)
+
+// 预览控制变量
+const previewScreenSide = ref<'Left' | 'Right'>('Left')
+const previewCarNumberDirection = ref<'Front' | 'Opposite'>('Front')
+const previewCurrentCarNumber = ref<number | undefined>(undefined)
 
 // 预览对象类型定义（与 E235-0 组件保持一致）
 interface DrawableObject {
@@ -297,176 +404,190 @@ function updateDoorside(value: 'Left' | 'Right') {
   emit('update', updatedPlatform)
 }
 
-function addBlock() {
-  const newBlock = {
-    exit: 1, // 默认关联第一个出口
-    units: []
+// 出口显示管理函数
+function addExitDisplay() {
+  const newExitDisplay: ExitDisplay = {
+    id: props.exits && props.exits.length > 0 ? props.exits[0].id : 1,
+    start: 0,
+    end: 935, // 默认覆盖整个画布宽度
+    pos: 'Border'
   }
 
   const updatedPlatform = {
     ...props.platform,
-    blocks: [...props.platform.blocks, newBlock]
-  }
-  emit('update', updatedPlatform)
-}
-
-function removeBlock(blockIndex: number) {
-  const updatedPlatform = {
-    ...props.platform,
-    blocks: props.platform.blocks.filter((_, index) => index !== blockIndex)
+    exits: [...(props.platform.exits || []), newExitDisplay]
   }
   emit('update', updatedPlatform)
 }
 
-function updateBlockExit(blockIndex: number, exitId: number) {
+function removeExitDisplay(exitIndex: number) {
   const updatedPlatform = {
     ...props.platform,
-    blocks: props.platform.blocks.map((block, index) =>
-      index === blockIndex ? { ...block, exit: exitId } : block
+    exits: (props.platform.exits || []).filter((_, index) => index !== exitIndex)
+  }
+  emit('update', updatedPlatform)
+}
+
+function updateExitDisplayId(exitIndex: number, exitId: number) {
+  const updatedPlatform = {
+    ...props.platform,
+    exits: (props.platform.exits || []).map((exitDisplay, index) =>
+      index === exitIndex ? { ...exitDisplay, id: exitId } : exitDisplay
     )
   }
   emit('update', updatedPlatform)
 }
 
-function addUnit(blockIndex: number) {
+function updateExitDisplayStart(exitIndex: number, start: number | undefined) {
+  if (start === undefined) return
+
+  const updatedPlatform = {
+    ...props.platform,
+    exits: (props.platform.exits || []).map((exitDisplay, index) =>
+      index === exitIndex ? { ...exitDisplay, start } : exitDisplay
+    )
+  }
+  emit('update', updatedPlatform)
+}
+
+function updateExitDisplayEnd(exitIndex: number, end: number | undefined) {
+  if (end === undefined) return
+
+  const updatedPlatform = {
+    ...props.platform,
+    exits: (props.platform.exits || []).map((exitDisplay, index) =>
+      index === exitIndex ? { ...exitDisplay, end } : exitDisplay
+    )
+  }
+  emit('update', updatedPlatform)
+}
+
+function updateExitDisplayPos(exitIndex: number, pos: ExitDisplay['pos']) {
+  const updatedPlatform = {
+    ...props.platform,
+    exits: (props.platform.exits || []).map((exitDisplay, index) =>
+      index === exitIndex ? { ...exitDisplay, pos } : exitDisplay
+    )
+  }
+  emit('update', updatedPlatform)
+}
+
+// 站台单元管理函数
+function addUnit() {
   const newUnit = {
     objects: []
   }
 
   const updatedPlatform = {
     ...props.platform,
-    blocks: props.platform.blocks.map((block, index) =>
-      index === blockIndex
-        ? { ...block, units: [...block.units, newUnit] }
-        : block
-    )
+    units: [...(props.platform.units || []), newUnit]
   }
   emit('update', updatedPlatform)
 }
 
-function removeUnit(blockIndex: number, unitIndex: number) {
+function removeUnit(unitIndex: number) {
   const updatedPlatform = {
     ...props.platform,
-    blocks: props.platform.blocks.map((block, index) =>
-      index === blockIndex
-        ? { ...block, units: block.units.filter((_, uIndex) => uIndex !== unitIndex) }
-        : block
-    )
+    units: (props.platform.units || []).filter((_, index) => index !== unitIndex)
   }
   emit('update', updatedPlatform)
 }
 
-function addObject(blockIndex: number, unitIndex: number) {
+// 站台对象管理函数
+function addObject(unitIndex: number) {
   const newObject: PlatformObject = {
     type: 'DownStairs',
     direction: 'Front',
-    pos: 'Center'
+    pos: 'Center',
+    linkedExit: undefined
   }
 
   const updatedPlatform = {
     ...props.platform,
-    blocks: props.platform.blocks.map((block, bIndex) =>
-      bIndex === blockIndex
-        ? {
-            ...block,
-            units: block.units.map((unit, uIndex) =>
-              uIndex === unitIndex
-                ? { ...unit, objects: [...unit.objects, newObject] }
-                : unit
-            )
-          }
-        : block
+    units: (props.platform.units || []).map((unit, index) =>
+      index === unitIndex
+        ? { ...unit, objects: [...unit.objects, newObject] }
+        : unit
     )
   }
   emit('update', updatedPlatform)
 }
 
-function removeObject(blockIndex: number, unitIndex: number, objectIndex: number) {
+function removeObject(unitIndex: number, objectIndex: number) {
   const updatedPlatform = {
     ...props.platform,
-    blocks: props.platform.blocks.map((block, bIndex) =>
-      bIndex === blockIndex
-        ? {
-            ...block,
-            units: block.units.map((unit, uIndex) =>
-              uIndex === unitIndex
-                ? { ...unit, objects: unit.objects.filter((_, oIndex) => oIndex !== objectIndex) }
-                : unit
-            )
-          }
-        : block
+    units: (props.platform.units || []).map((unit, uIndex) =>
+      uIndex === unitIndex
+        ? { ...unit, objects: unit.objects.filter((_, oIndex) => oIndex !== objectIndex) }
+        : unit
     )
   }
   emit('update', updatedPlatform)
 }
 
-function updateObjectType(blockIndex: number, unitIndex: number, objectIndex: number, type: PlatformObject['type']) {
+function updateObjectType(unitIndex: number, objectIndex: number, type: PlatformObject['type']) {
   const updatedPlatform = {
     ...props.platform,
-    blocks: props.platform.blocks.map((block, bIndex) =>
-      bIndex === blockIndex
+    units: (props.platform.units || []).map((unit, uIndex) =>
+      uIndex === unitIndex
         ? {
-            ...block,
-            units: block.units.map((unit, uIndex) =>
-              uIndex === unitIndex
-                ? {
-                    ...unit,
-                    objects: unit.objects.map((obj, oIndex) =>
-                      oIndex === objectIndex ? { ...obj, type } : obj
-                    )
-                  }
-                : unit
+            ...unit,
+            objects: unit.objects.map((obj, oIndex) =>
+              oIndex === objectIndex ? { ...obj, type } : obj
             )
           }
-        : block
+        : unit
     )
   }
   emit('update', updatedPlatform)
 }
 
-function updateObjectDirection(blockIndex: number, unitIndex: number, objectIndex: number, direction: PlatformObject['direction']) {
+function updateObjectDirection(unitIndex: number, objectIndex: number, direction: PlatformObject['direction']) {
   const updatedPlatform = {
     ...props.platform,
-    blocks: props.platform.blocks.map((block, bIndex) =>
-      bIndex === blockIndex
+    units: (props.platform.units || []).map((unit, uIndex) =>
+      uIndex === unitIndex
         ? {
-            ...block,
-            units: block.units.map((unit, uIndex) =>
-              uIndex === unitIndex
-                ? {
-                    ...unit,
-                    objects: unit.objects.map((obj, oIndex) =>
-                      oIndex === objectIndex ? { ...obj, direction } : obj
-                    )
-                  }
-                : unit
+            ...unit,
+            objects: unit.objects.map((obj, oIndex) =>
+              oIndex === objectIndex ? { ...obj, direction } : obj
             )
           }
-        : block
+        : unit
     )
   }
   emit('update', updatedPlatform)
 }
 
-function updateObjectPos(blockIndex: number, unitIndex: number, objectIndex: number, pos: PlatformObject['pos']) {
+function updateObjectPos(unitIndex: number, objectIndex: number, pos: PlatformObject['pos']) {
   const updatedPlatform = {
     ...props.platform,
-    blocks: props.platform.blocks.map((block, bIndex) =>
-      bIndex === blockIndex
+    units: (props.platform.units || []).map((unit, uIndex) =>
+      uIndex === unitIndex
         ? {
-            ...block,
-            units: block.units.map((unit, uIndex) =>
-              uIndex === unitIndex
-                ? {
-                    ...unit,
-                    objects: unit.objects.map((obj, oIndex) =>
-                      oIndex === objectIndex ? { ...obj, pos } : obj
-                    )
-                  }
-                : unit
+            ...unit,
+            objects: unit.objects.map((obj, oIndex) =>
+              oIndex === objectIndex ? { ...obj, pos } : obj
             )
           }
-        : block
+        : unit
+    )
+  }
+  emit('update', updatedPlatform)
+}
+
+function updateObjectLinkedExit(unitIndex: number, objectIndex: number, linkedExit: number | undefined) {
+  const updatedPlatform = {
+    ...props.platform,
+    units: (props.platform.units || []).map((unit, uIndex) =>
+      uIndex === unitIndex
+        ? {
+            ...unit,
+            objects: unit.objects.map((obj, oIndex) =>
+              oIndex === objectIndex ? { ...obj, linkedExit } : obj
+            )
+          }
+        : unit
     )
   }
   emit('update', updatedPlatform)
