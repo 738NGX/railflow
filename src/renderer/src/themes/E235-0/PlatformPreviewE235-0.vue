@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { Application, Graphics, Text, Sprite } from 'pixi.js';
+import { Application, Graphics, Text, Sprite, Container, Ticker } from 'pixi.js';
 import { onMounted, onUnmounted, ref, computed, watch } from 'vue';
 import type { Platform, Exit } from '../../../../../types/station';
 import { assetLoader } from '../../utils/assetLoader';
@@ -24,7 +24,7 @@ const props = withDefaults(defineProps<Props>(), {
   screenSide: 'Left',
   carNumberDirection: 'Front',
   currentCarNumber: undefined,
-  enableAnimations: false,
+  enableAnimations: true,
   showDebugInfo: false
 });
 
@@ -54,6 +54,9 @@ const obj_center_y = computed(() => isDoorOpen.value ? 120 : 165);
 let app: Application;
 let resizeObserver: ResizeObserver;
 let textures: any = null; // 缓存加载的纹理
+let leftDoorContainer: Container | null = null; // 左门容器引用
+let rightDoorContainer: Container | null = null; // 右门容器引用
+let doorTicker: Ticker | null = null; // 门动画专用ticker
 
 const scaleCanvas = () => {
   if (!canvasContainer.value || !app) return;
@@ -270,8 +273,8 @@ const drawScene = (loadedTextures?: any) => {
         // 主体
         app.stage.addChild(
           new Graphics()
-          .rect(unitX - 17.5, unitY - 12.5, 35, 30)
-          .fill(0x808080)
+            .rect(unitX - 17.5, unitY - 12.5, 35, 30)
+            .fill(0x808080)
         );
         const obj = unit.objects[0].type === 'DownStairs' ? new Sprite(currentTextures.downStairs) : new Sprite(currentTextures.downEscalator);
         obj.anchor.set(0.5, 0);
@@ -286,8 +289,8 @@ const drawScene = (loadedTextures?: any) => {
         app.stage.addChild(obj);
         app.stage.addChild(
           new Graphics()
-          .rect(unitX - 17.5, unitY + 12.5, 35, 30)
-          .fill(0xC0C9D0)
+            .rect(unitX - 17.5, unitY + 12.5, 35, 30)
+            .fill(0xC0C9D0)
         );
 
         // 出口联络线
@@ -337,7 +340,7 @@ const drawScene = (loadedTextures?: any) => {
         // 主体
         const obj = unit.objects[0].type === 'UpStairs' ? new Sprite(currentTextures.upStairs) :
           unit.objects[0].type === 'UpEscalator' ? new Sprite(currentTextures.upEscalator)
-          : new Sprite(currentTextures.elevator);
+            : new Sprite(currentTextures.elevator);
         obj.anchor.set(0.5, 1);
         obj.x = unitX;
         obj.y = unitY + 12.5;
@@ -445,13 +448,121 @@ const drawScene = (loadedTextures?: any) => {
 
   // 门动画
   const doorBase = new Graphics()
-      .moveTo(135,355)
-      .lineTo(255,355)
-      .lineTo(275,370)
-      .lineTo(115,370)
-      .closePath()
-      .fill(0xC0C000);
+    .moveTo(135, 355)
+    .lineTo(255, 355)
+    .lineTo(275, 370)
+    .lineTo(115, 370)
+    .closePath()
+    .fill(0xC0C000);
   app.stage.addChild(doorBase);
+
+  // 创建门容器 - 使用 Container 而不是 Graphics
+  leftDoorContainer = new Container();
+  rightDoorContainer = new Container();
+
+  // 左侧门主体 (银灰色)
+  const leftDoorBody = new Graphics()
+    .rect(135, 250, 60, 105)
+    .fill(0xC0C9D0)
+    .stroke({ width: 1, color: 0x000000 });
+  leftDoorContainer.addChild(leftDoorBody);
+
+  // 左侧箭头 (指向左)
+  const leftArrow = new Graphics()
+    .moveTo(100, 317) // 箭头尖端
+    .lineTo(115, 307) // 上边
+    .lineTo(115, 312) // 中上
+    .lineTo(125, 312) // 右上
+    .lineTo(125, 322) // 右下
+    .lineTo(115, 322) // 中下
+    .lineTo(115, 327) // 下边
+    .closePath()
+    .fill(0xFFFFFF);
+  leftDoorContainer.addChild(leftArrow);
+
+  // 右侧门主体 (银灰色)
+  const rightDoorBody = new Graphics()
+    .rect(195, 250, 60, 105)
+    .fill(0xC0C9D0)
+    .stroke({ width: 1, color: 0x000000 });
+  rightDoorContainer.addChild(rightDoorBody);
+
+  // 右侧箭头 (指向右)
+  const rightArrow = new Graphics()
+    .moveTo(290, 317) // 箭头尖端
+    .lineTo(275, 307) // 上边
+    .lineTo(275, 312) // 中上
+    .lineTo(265, 312) // 左上
+    .lineTo(265, 322) // 左下
+    .lineTo(275, 322) // 中下
+    .lineTo(275, 327) // 下边
+    .closePath()
+    .fill(0xFFFFFF);
+  rightDoorContainer.addChild(rightArrow);
+
+  app.stage.addChild(leftDoorContainer);
+  app.stage.addChild(rightDoorContainer);
+
+  // 设置初始位置
+  leftDoorContainer.x = 0;
+  rightDoorContainer.x = 0;
+};
+
+let offset = 0
+let waitTime = 0;
+
+// 门动画ticker函数
+const doorAnimationTicker = (ticker: Ticker) => {
+  const max_offset = 40;
+  if (!leftDoorContainer || !rightDoorContainer) return;
+  if (props.enableAnimations && isDoorOpen.value && offset <= max_offset) {
+    if (offset !== max_offset) offset += 0.5 * ticker.deltaTime;
+
+    // 左门向左移动，右门向右移动
+    leftDoorContainer.x = -Math.abs(offset);
+    rightDoorContainer.x = Math.abs(offset);
+    if (offset >= max_offset) {
+      offset = max_offset;
+      waitTime += ticker.deltaTime;
+      console.log(waitTime)
+      if (waitTime >= 100) {
+        waitTime = 0;
+        offset = 0;
+      }
+    }
+  }
+};
+
+// 启动门动画
+const startDoorAnimation = () => {
+  // 停止之前的ticker
+  stopDoorAnimation();
+
+  if (props.enableAnimations && isDoorOpen.value && leftDoorContainer && rightDoorContainer) {
+    // 创建新的ticker
+    doorTicker = new Ticker();
+
+    // 添加动画函数
+    doorTicker.add(doorAnimationTicker);
+
+    // 启动ticker
+    doorTicker.start();
+  }
+};
+
+// 停止门动画
+const stopDoorAnimation = () => {
+  if (doorTicker) {
+    doorTicker.stop();
+    doorTicker.destroy();
+    doorTicker = null;
+  }
+
+  // 重置门的位置
+  if (leftDoorContainer && rightDoorContainer) {
+    leftDoorContainer.x = 0;
+    rightDoorContainer.x = 0;
+  }
 };
 
 onMounted(async () => {
@@ -471,6 +582,7 @@ onMounted(async () => {
   });
 
   drawScene(textures); // 首次绘制时传入纹理
+  startDoorAnimation(); // 启动门动画
 
   canvasContainer.value.appendChild(app.canvas);
   scaleCanvas();
@@ -482,10 +594,11 @@ onMounted(async () => {
 
 // 监听props变化并重新绘制
 watch(
-  () => [props.screenSide, props.carNumberDirection, props.currentCarNumber, props.platform?.doorside, props.platform?.exits, props.exits],
+  () => [props.screenSide, props.carNumberDirection, props.currentCarNumber, props.platform?.doorside, props.platform?.exits, props.exits, props.enableAnimations],
   () => {
     if (app) {
       drawScene();
+      startDoorAnimation(); // 重新启动动画
     }
   },
   { deep: true }
@@ -493,6 +606,7 @@ watch(
 
 onUnmounted(() => {
   // 清理资源
+  stopDoorAnimation();
   if (resizeObserver) {
     resizeObserver.disconnect();
   }

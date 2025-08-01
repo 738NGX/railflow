@@ -79,7 +79,7 @@
         :screen-side="previewScreenSide"
         :car-number-direction="previewCarNumberDirection"
         :current-car-number="previewCurrentCarNumber"
-        :enable-animations="enablePreviewAnimations"
+        :disableAnimations="enablePreviewAnimations"
         :show-debug-info="showDebugInfo"
         @object-click="handleObjectClick"
         @object-hover="handleObjectHover"
