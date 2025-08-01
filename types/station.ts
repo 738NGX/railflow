@@ -21,7 +21,8 @@ export interface StationNumbering {
 export interface PlatformObject {
   type: 'DownStairs' | 'UpStairs' | 'DownEscalator' | 'UpEscalator' | 'Elevator';
   direction: 'Front' | 'Opposite'
-  pos: 'Front' | 'Center' | 'Back';
+  ah: 'Front' | 'Center' | 'Back';  // Horizontal alignment of the object
+  av: 'Front' | 'Center' | 'Back';  // Vertical alignment of the object
   linkedExit: number | undefined; // Exit ID this object is linked to, if any
 }
 
@@ -29,7 +30,7 @@ export interface ExitDisplay {
   id: number;     // linked to exit info
   start: number;  // Should start at which x, range is [0,  end)
   end: number;    // should end at which x, range is (start, 935]
-  pos: 'Front' | 'Center' | 'Back' | 'Border';
+  av: 'Front' | 'Center' | 'Back' | 'Border'; // Vertical alignment of the display
 }
 
 export interface Platform {

@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-4">
+  <div class="grid grid-cols-1 xxl:grid-cols-2 gap-4">
     <!-- 站台预览 -->
     <div class="mb-6">
       <div class="flex justify-between items-center mb-3">
@@ -100,7 +100,7 @@
       </div>
     </div>
 
-    <el-form label-position="top">
+    <el-form label-position="top" class="h-128 overflow-auto">
       <div class="grid grid-cols-[3fr_1fr] gap-4 mb-4">
         <el-form-item label="日文名称">
           <el-input
@@ -173,15 +173,15 @@
                 />
               </el-form-item>
 
-              <el-form-item label="显示位置">
+              <el-form-item label="垂直对齐">
                 <el-select
-                  :model-value="exitDisplay.pos"
+                  :model-value="exitDisplay.av"
                   @change="updateExitDisplayPos(exitIndex, $event)"
                 >
                   <el-option label="站台近侧" value="Front" />
                   <el-option label="站台中部" value="Center" />
-                  <el-option label="站台远部" value="Back" />
-                  <el-option label="站台边界" value="Border" />
+                  <el-option label="站台远侧" value="Back" />
+                  <el-option label="站台界外" value="Border" />
                 </el-select>
               </el-form-item>
             </div>
@@ -254,12 +254,23 @@
                     class="w-24"
                     @change="updateObjectDirection(unitIndex, objectIndex, $event)"
                   >
-                    <el-option label="前方" value="Front" />
-                    <el-option label="对面" value="Opposite" />
+                    <el-option label="列车行进方向" value="Front" />
+                    <el-option label="列车行进反向" value="Opposite" />
                   </el-select>
 
                   <el-select
-                    :model-value="object.pos"
+                    :model-value="object.ah"
+                    placeholder="位置"
+                    class="w-24"
+                    @change="updateObjectPos(unitIndex, objectIndex, $event)"
+                  >
+                    <el-option label="前部" value="Front" />
+                    <el-option label="中部" value="Center" />
+                    <el-option label="后部" value="Back" />
+                  </el-select>
+
+                  <el-select
+                    :model-value="object.av"
                     placeholder="位置"
                     class="w-24"
                     @change="updateObjectPos(unitIndex, objectIndex, $event)"
@@ -357,7 +368,7 @@ interface DrawableObject {
   id: string
   type: PlatformObject['type']
   direction: PlatformObject['direction']
-  pos: PlatformObject['pos']
+  pos: PlatformObject['ah']
   unitIndex: number
   x: number
   y: number
@@ -405,7 +416,7 @@ function addExitDisplay() {
     id: props.exits && props.exits.length > 0 ? props.exits[0].id : 1,
     start: 0,
     end: 935, // 默认覆盖整个画布宽度
-    pos: 'Border'
+    av: 'Border'
   }
 
   const updatedPlatform = {
@@ -457,11 +468,11 @@ function updateExitDisplayEnd(exitIndex: number, end: number | undefined) {
   emit('update', updatedPlatform)
 }
 
-function updateExitDisplayPos(exitIndex: number, pos: ExitDisplay['pos']) {
+function updateExitDisplayPos(exitIndex: number, pos: ExitDisplay['av']) {
   const updatedPlatform = {
     ...props.platform,
     exits: (props.platform.exits || []).map((exitDisplay, index) =>
-      index === exitIndex ? { ...exitDisplay, pos } : exitDisplay
+      index === exitIndex ? { ...exitDisplay, av: pos } : exitDisplay
     )
   }
   emit('update', updatedPlatform)
@@ -493,7 +504,8 @@ function addObject(unitIndex: number) {
   const newObject: PlatformObject = {
     type: 'DownStairs',
     direction: 'Front',
-    pos: 'Center',
+    ah: 'Center',
+    av: 'Front',
     linkedExit: undefined
   }
 
@@ -554,7 +566,7 @@ function updateObjectDirection(unitIndex: number, objectIndex: number, direction
   emit('update', updatedPlatform)
 }
 
-function updateObjectPos(unitIndex: number, objectIndex: number, pos: PlatformObject['pos']) {
+function updateObjectPos(unitIndex: number, objectIndex: number, pos: PlatformObject['ah']) {
   const updatedPlatform = {
     ...props.platform,
     units: (props.platform.units || []).map((unit, uIndex) =>
@@ -562,7 +574,7 @@ function updateObjectPos(unitIndex: number, objectIndex: number, pos: PlatformOb
         ? {
             ...unit,
             objects: unit.objects.map((obj, oIndex) =>
-              oIndex === objectIndex ? { ...obj, pos } : obj
+              oIndex === objectIndex ? { ...obj, ah: pos } : obj
             )
           }
         : unit

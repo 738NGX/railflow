@@ -48,6 +48,8 @@ const exit_border_y = computed(() => isDoorOpen.value ? 5 : 200);
 const exit_front_y = computed(() => isDoorOpen.value ? 135 : 50);
 const exit_center_y = computed(() => 92.5);
 const exit_back_y = computed(() => isDoorOpen.value ? 50 : 135);
+const obj_front_y = computed(() => isDoorOpen.value ? 150 : 135);
+const obj_center_y = computed(() => isDoorOpen.value ? 120 : 165);
 
 let app: Application;
 let resizeObserver: ResizeObserver;
@@ -92,6 +94,20 @@ const drawScene = (loadedTextures?: any) => {
     .rect(0, 185, CANVAS_WIDTH, 10)
     .fill(0x607080);
   app.stage.addChild(platformBase);
+
+  // 站台黄线
+  const platformTopDashedLine = new Graphics();
+  platformTopDashedLine.setStrokeStyle({
+    width: 3,
+    color: 0xE0E080,
+  });
+  for (let x = 0; x < CANVAS_WIDTH; x += 18) {
+    platformTopDashedLine
+      .moveTo(x, isDoorOpen.value ? 55 : 175)
+      .lineTo(Math.min(x + 10, CANVAS_WIDTH), isDoorOpen.value ? 55 : 175);
+  }
+  platformTopDashedLine.stroke();
+  app.stage.addChild(platformTopDashedLine);
 
   // 绘制车辆图案
   const totalCars = 11; // E235-0系列通常是11节车厢
@@ -243,55 +259,98 @@ const drawScene = (loadedTextures?: any) => {
 
   const unitsNum = props.platform?.units?.length || 0;
   props.platform?.units.forEach((unit, index) => {
-    const unitX = 12 + (index + 0.5) * (936 / unitsNum);
+    const baseUnitX = 12 + (isDoorOpen.value ? index + 0.5 : unitsNum - index - 0.5) * (960 / unitsNum);
+
     if (unit.objects.length === 1) {
       if (unit.objects[0].type === 'DownStairs' || unit.objects[0].type === 'DownEscalator') {
-        const unitY = 125
-        const base = new Graphics()
-          .rect(unitX - 17.5, unitY, 35, 30)
-          .fill(0x808080);
-        app.stage.addChild(base);
+        const unitX = baseUnitX;
+        const unitY = unit.objects[0].av === 'Center' ? obj_center_y.value - 12.5 : obj_front_y.value - 12.5
+        const needFlip = unit.objects[0].direction === 'Opposite' && arrowDirection.value === 'Right' || unit.objects[0].direction === 'Front' && arrowDirection.value === 'Left'
+
+        // 主体
+        app.stage.addChild(
+          new Graphics()
+          .rect(unitX - 17.5, unitY - 12.5, 35, 30)
+          .fill(0x808080)
+        );
         const obj = unit.objects[0].type === 'DownStairs' ? new Sprite(currentTextures.downStairs) : new Sprite(currentTextures.downEscalator);
         obj.anchor.set(0.5, 0);
         obj.x = unitX;
-        obj.y = unitY;
+        obj.y = unitY - 12.5;
         const aspect_ratio = obj.texture.width / obj.texture.height;
         obj.width = 35;
         obj.height = obj.width / aspect_ratio;
+        if (needFlip) {
+          obj.scale.x *= -1
+        }
         app.stage.addChild(obj);
-        const cover = new Graphics()
-          .rect(unitX - 17.5, 150, 35, 30)
-          .fill(0xC0C9D0);
-        app.stage.addChild(cover);
+        app.stage.addChild(
+          new Graphics()
+          .rect(unitX - 17.5, unitY + 12.5, 35, 30)
+          .fill(0xC0C9D0)
+        );
+
+        // 出口联络线
+        if (unit.objects[0].linkedExit) {
+          const linedExit = props.platform?.exits?.find(e => e.id === unit.objects[0].linkedExit)
+          if (linedExit) {
+            const exit_y = linedExit.av === 'Front' ? exit_front_y.value :
+              linedExit.av === 'Center' ? exit_center_y.value :
+                linedExit.av === 'Back' ? exit_back_y.value : exit_border_y.value;
+            app.stage.addChild(
+              new Graphics()
+                .rect(unitX - 3, Math.min(exit_y, unitY + 12.5), 6, Math.abs(exit_y - unitY + 12.5))
+                .fill(0xFFFFFF)
+            );
+            app.stage.addChild(
+              new Graphics()
+                .rect(unitX - 1, Math.min(exit_y, unitY + 12.5), 2, Math.abs(exit_y - unitY + 12.5))
+                .fill(0x000000)
+            );
+          }
+        }
+      } else {
+        const unitX = baseUnitX;
+        const unitY = unit.objects[0].av === 'Center' ? obj_center_y.value - 12.5 : obj_front_y.value - 12.5
+        const needFlip = unit.objects[0].direction === 'Opposite' && arrowDirection.value === 'Right' || unit.objects[0].direction === 'Front' && arrowDirection.value === 'Left'
+
+        // 出口联络线
+        if (unit.objects[0].linkedExit) {
+          const linedExit = props.platform?.exits?.find(e => e.id === unit.objects[0].linkedExit)
+          if (linedExit) {
+            const exit_y = linedExit.av === 'Front' ? exit_front_y.value :
+              linedExit.av === 'Center' ? exit_center_y.value :
+                linedExit.av === 'Back' ? exit_back_y.value : exit_border_y.value;
+            app.stage.addChild(
+              new Graphics()
+                .rect(unitX - 3, Math.min(exit_y, unitY + 12.5), 6, Math.abs(exit_y - unitY + 12.5))
+                .fill(0xFFFFFF)
+            );
+            app.stage.addChild(
+              new Graphics()
+                .rect(unitX - 1, Math.min(exit_y, unitY + 12.5), 2, Math.abs(exit_y - unitY + 12.5))
+                .fill(0x000000)
+            );
+          }
+        }
+
+        // 主体
+        const obj = unit.objects[0].type === 'UpStairs' ? new Sprite(currentTextures.upStairs) :
+          unit.objects[0].type === 'UpEscalator' ? new Sprite(currentTextures.upEscalator)
+          : new Sprite(currentTextures.elevator);
+        obj.anchor.set(0.5, 1);
+        obj.x = unitX;
+        obj.y = unitY + 12.5;
+        const aspect_ratio = obj.texture.width / obj.texture.height;
+        obj.width = 35;
+        obj.height = obj.width / aspect_ratio;
+        if (needFlip) {
+          obj.scale.x *= -1
+        }
+        app.stage.addChild(obj)
       }
     }
   });
-
-  // 站台黄线
-  const platformTopDashedLine = new Graphics();
-  platformTopDashedLine.setStrokeStyle({
-    width: 3,
-    color: 0xE0E080,
-  });
-  for (let x = 0; x < CANVAS_WIDTH; x += 18) {
-    platformTopDashedLine
-      .moveTo(x, 55)
-      .lineTo(Math.min(x + 10, CANVAS_WIDTH), 55);
-  }
-  platformTopDashedLine.stroke();
-  app.stage.addChild(platformTopDashedLine);
-  const platformBottomDashedLine = new Graphics();
-  platformBottomDashedLine.setStrokeStyle({
-    width: 3,
-    color: 0xE0E080,
-  });
-  for (let x = 0; x < CANVAS_WIDTH; x += 18) {
-    platformBottomDashedLine
-      .moveTo(x, 175)
-      .lineTo(Math.min(x + 10, CANVAS_WIDTH), 175);
-  }
-  platformBottomDashedLine.stroke();
-  app.stage.addChild(platformBottomDashedLine);
 
   // 出口位置提示
   props.platform?.exits.forEach(
@@ -299,9 +358,9 @@ const drawScene = (loadedTextures?: any) => {
       // 通过ID查找对应的出口信息
       const exitInfo = props.exits?.find(e => e.id === exit.id);
       const exit_x = isDoorOpen.value ? 12 + exit.start : 948 - exit.end;
-      const exit_y = exit.pos === 'Front' ? exit_front_y.value :
-        exit.pos === 'Center' ? exit_center_y.value :
-          exit.pos === 'Back' ? exit_back_y.value : exit_border_y.value;
+      const exit_y = exit.av === 'Front' ? exit_front_y.value :
+        exit.av === 'Center' ? exit_center_y.value :
+          exit.av === 'Back' ? exit_back_y.value : exit_border_y.value;
 
       const exitContainer = new Graphics()
         .rect(exit_x, exit_y, exit.end - exit.start, 36)
@@ -338,6 +397,20 @@ const drawScene = (loadedTextures?: any) => {
     }
   )
 
+  // 站台黄线
+  const platformBottomDashedLine = new Graphics();
+  platformBottomDashedLine.setStrokeStyle({
+    width: 3,
+    color: 0xE0E080,
+  });
+  for (let x = 0; x < CANVAS_WIDTH; x += 18) {
+    platformBottomDashedLine
+      .moveTo(x, isDoorOpen.value ? 175 : 55)
+      .lineTo(Math.min(x + 10, CANVAS_WIDTH), isDoorOpen.value ? 175 : 55);
+  }
+  platformBottomDashedLine.stroke();
+  app.stage.addChild(platformBottomDashedLine);
+
   // 开门提示
   const doorDirectionBg = new Graphics()
     .rect(0, 240, CANVAS_WIDTH, 140)
@@ -369,6 +442,16 @@ const drawScene = (loadedTextures?: any) => {
     anchor: 0.5
   });
   app.stage.addChild(doorDirectionEng);
+
+  // 门动画
+  const doorBase = new Graphics()
+      .moveTo(135,355)
+      .lineTo(255,355)
+      .lineTo(275,370)
+      .lineTo(115,370)
+      .closePath()
+      .fill(0xC0C000);
+  app.stage.addChild(doorBase);
 };
 
 onMounted(async () => {
@@ -379,7 +462,6 @@ onMounted(async () => {
   // 使用全局资源管理器批量加载资源
   const loadedTextures = await assetLoader.loadMultipleTextures(SVG_ASSETS_ARRAY);
 
-  // 为了兼容现有代码，保持 ds_texture 命名
   textures = loadedTextures
 
   await app.init({
