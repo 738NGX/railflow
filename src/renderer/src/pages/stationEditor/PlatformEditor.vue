@@ -1,5 +1,5 @@
 <template>
-  <div class="grid grid-cols-1 xxl:grid-cols-2 gap-4">
+  <div class="grid grid-cols-1 2xl:grid-cols-2 gap-4">
     <!-- 站台预览 -->
     <div class="mb-6">
       <div class="flex justify-between items-center mb-3">
@@ -79,7 +79,7 @@
         :screen-side="previewScreenSide"
         :car-number-direction="previewCarNumberDirection"
         :current-car-number="previewCurrentCarNumber"
-        :disableAnimations="enablePreviewAnimations"
+        :enable-animations="enablePreviewAnimations"
         :show-debug-info="showDebugInfo"
         @object-click="handleObjectClick"
         @object-hover="handleObjectHover"
@@ -241,10 +241,10 @@
                     class="w-32"
                     @change="updateObjectType(unitIndex, objectIndex, $event)"
                   >
-                    <el-option label="下楼梯" value="DownStairs" />
-                    <el-option label="上楼梯" value="UpStairs" />
-                    <el-option label="下扶梯" value="DownEscalator" />
-                    <el-option label="上扶梯" value="UpEscalator" />
+                    <el-option label="下行楼梯" value="DownStairs" />
+                    <el-option label="上行楼梯" value="UpStairs" />
+                    <el-option label="下行扶梯" value="DownEscalator" />
+                    <el-option label="上行扶梯" value="UpEscalator" />
                     <el-option label="电梯" value="Elevator" />
                   </el-select>
 
@@ -254,30 +254,42 @@
                     class="w-24"
                     @change="updateObjectDirection(unitIndex, objectIndex, $event)"
                   >
-                    <el-option label="列车行进方向" value="Front" />
-                    <el-option label="列车行进反向" value="Opposite" />
+                    <el-option label="朝向车头" value="Front" />
+                    <el-option label="朝向车尾" value="Opposite" />
                   </el-select>
 
                   <el-select
                     :model-value="object.ah"
                     placeholder="位置"
                     class="w-24"
-                    @change="updateObjectPos(unitIndex, objectIndex, $event)"
+                    @change="updateObjectAh(unitIndex, objectIndex, $event)"
                   >
-                    <el-option label="前部" value="Front" />
-                    <el-option label="中部" value="Center" />
-                    <el-option label="后部" value="Back" />
+                    <el-option label="对齐车头6" value="Front6" />
+                    <el-option label="对齐车头5" value="Front5" />
+                    <el-option label="对齐车头4" value="Front4" />
+                    <el-option label="对齐车头3" value="Front3" />
+                    <el-option label="对齐车头2" value="Front2" />
+                    <el-option label="对齐车头1" value="Front1" />
+                    <el-option label="对齐车头" value="Front" />
+                    <el-option label="对齐中间" value="Center" />
+                    <el-option label="对齐车尾" value="Back" />
+                    <el-option label="对齐车尾1" value="Back1" />
+                    <el-option label="对齐车尾2" value="Back2" />
+                    <el-option label="对齐车尾3" value="Back3" />
+                    <el-option label="对齐车尾4" value="Back4" />
+                    <el-option label="对齐车尾5" value="Back5" />
+                    <el-option label="对齐车尾6" value="Back6" />
                   </el-select>
 
                   <el-select
                     :model-value="object.av"
                     placeholder="位置"
                     class="w-24"
-                    @change="updateObjectPos(unitIndex, objectIndex, $event)"
+                    @change="updateObjectAv(unitIndex, objectIndex, $event)"
                   >
-                    <el-option label="前部" value="Front" />
-                    <el-option label="中部" value="Center" />
-                    <el-option label="后部" value="Back" />
+                    <el-option label="站台近侧" value="Front" />
+                    <el-option label="站台中部" value="Center" />
+                    <el-option label="站台远侧" value="Back" />
                   </el-select>
 
                   <el-select
@@ -355,7 +367,7 @@ const emit = defineEmits<Emits>()
 const selectedTrainType = ref<string>('E235-0')
 
 // 预览配置
-const enablePreviewAnimations = ref(false)
+const enablePreviewAnimations = ref(true)
 const showDebugInfo = ref(false)
 
 // 预览控制变量
@@ -566,7 +578,7 @@ function updateObjectDirection(unitIndex: number, objectIndex: number, direction
   emit('update', updatedPlatform)
 }
 
-function updateObjectPos(unitIndex: number, objectIndex: number, pos: PlatformObject['ah']) {
+function updateObjectAh(unitIndex: number, objectIndex: number, ah: PlatformObject['ah']) {
   const updatedPlatform = {
     ...props.platform,
     units: (props.platform.units || []).map((unit, uIndex) =>
@@ -574,7 +586,24 @@ function updateObjectPos(unitIndex: number, objectIndex: number, pos: PlatformOb
         ? {
             ...unit,
             objects: unit.objects.map((obj, oIndex) =>
-              oIndex === objectIndex ? { ...obj, ah: pos } : obj
+              oIndex === objectIndex ? { ...obj, ah: ah } : obj
+            )
+          }
+        : unit
+    )
+  }
+  emit('update', updatedPlatform)
+}
+
+function updateObjectAv(unitIndex: number, objectIndex: number, av: PlatformObject['av']) {
+  const updatedPlatform = {
+    ...props.platform,
+    units: (props.platform.units || []).map((unit, uIndex) =>
+      uIndex === unitIndex
+        ? {
+            ...unit,
+            objects: unit.objects.map((obj, oIndex) =>
+              oIndex === objectIndex ? { ...obj, av: av } : obj
             )
           }
         : unit

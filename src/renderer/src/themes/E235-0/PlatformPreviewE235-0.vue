@@ -1,7 +1,7 @@
 <script lang="ts" setup>
-import { Application, Graphics, Text, Sprite, Container, Ticker } from 'pixi.js';
+import { Application, Graphics, Text, Sprite, Container, Ticker, FillGradient } from 'pixi.js';
 import { onMounted, onUnmounted, ref, computed, watch } from 'vue';
-import type { Platform, Exit } from '../../../../../types/station';
+import type { Platform, Exit, PlatformObject } from '../../../../../types/station';
 import { assetLoader } from '../../utils/assetLoader';
 import { SVG_ASSETS_ARRAY } from '../../utils/svgAssets';
 
@@ -56,6 +56,7 @@ let resizeObserver: ResizeObserver;
 let textures: any = null; // 缓存加载的纹理
 let leftDoorContainer: Container | null = null; // 左门容器引用
 let rightDoorContainer: Container | null = null; // 右门容器引用
+let doorArrow: Graphics | null = null; // 门箭头引用
 let doorTicker: Ticker | null = null; // 门动画专用ticker
 
 const scaleCanvas = () => {
@@ -260,20 +261,61 @@ const drawScene = (loadedTextures?: any) => {
     app.stage.addChild(rightArrow);
   }
 
+  // 站台组件
   const unitsNum = props.platform?.units?.length || 0;
+  const getUnitX = (obj: PlatformObject, centerUnitX: number, offset: number): number => {
+    const ah = obj.ah;
+    const direction = arrowDirection.value;
+
+    const match = ah.match(/^(Front|Back)(\d*)$/);
+
+    if (!match) {
+      return centerUnitX;
+    }
+
+    const baseType = match[1]; // "Front" 或 "Back"
+    const n = parseInt(match[2] || '0', 10);
+
+    let sign = (direction === 'Left') ? -1 : 1;
+    if (baseType === 'Back') {
+      sign *= -1; // Back 类型反转符号
+    }
+
+    const stepAdjustment = sign * (n - 1) * 17.5;
+    const totalAdjustment = sign * offset + stepAdjustment;
+
+    return centerUnitX + totalAdjustment;
+  };
   props.platform?.units.forEach((unit, index) => {
-    const baseUnitX = 12 + (isDoorOpen.value ? index + 0.5 : unitsNum - index - 0.5) * (960 / unitsNum);
+    const unitsLength = 936
+    const centerUnitX = 12 + (isDoorOpen.value ? index + 0.5 : unitsNum - index - 0.5) * (unitsLength / unitsNum);
 
     if (unit.objects.length === 1) {
-      if (unit.objects[0].type === 'DownStairs' || unit.objects[0].type === 'DownEscalator') {
-        const unitX = baseUnitX;
+      if (unit.objects[0].type.startsWith('Down')) {
+        const unitX = getUnitX(unit.objects[0], centerUnitX, unitsLength / 2 / unitsNum);
         const unitY = unit.objects[0].av === 'Center' ? obj_center_y.value - 12.5 : obj_front_y.value - 12.5
         const needFlip = unit.objects[0].direction === 'Opposite' && arrowDirection.value === 'Right' || unit.objects[0].direction === 'Front' && arrowDirection.value === 'Left'
+
+        // 出口联络线
+        if (unit.objects[0].linkedExit) {
+          const linedExit = props.platform?.exits?.find(e => e.id === unit.objects[0].linkedExit)
+          if (linedExit) {
+            const exit_y = linedExit.av === 'Front' ? exit_front_y.value :
+              linedExit.av === 'Center' ? exit_center_y.value :
+                linedExit.av === 'Back' ? exit_back_y.value : exit_border_y.value;
+            app.stage.addChild(
+              new Graphics()
+                .rect(unitX - 2, Math.min(exit_y, unitY), 4, Math.abs(exit_y - unitY))
+                .fill(0x000000)
+                .stroke({ width: 2, color: 0xFFFFFF })
+            );
+          }
+        }
 
         // 主体
         app.stage.addChild(
           new Graphics()
-            .rect(unitX - 17.5, unitY - 12.5, 35, 30)
+            .rect(unitX - (needFlip ? 17.5 : 12.5), unitY - 12.5, 30, 25)
             .fill(0x808080)
         );
         const obj = unit.objects[0].type === 'DownStairs' ? new Sprite(currentTextures.downStairs) : new Sprite(currentTextures.downEscalator);
@@ -283,37 +325,22 @@ const drawScene = (loadedTextures?: any) => {
         const aspect_ratio = obj.texture.width / obj.texture.height;
         obj.width = 35;
         obj.height = obj.width / aspect_ratio;
+        if (unit.objects[0].type === 'DownEscalator') {
+          obj.width = 39;
+          obj.height = obj.width / aspect_ratio;
+          obj.x -= (needFlip ? -2 : 2);
+          obj.y -= 4;
+        }
         if (needFlip) {
           obj.scale.x *= -1
         }
         app.stage.addChild(obj);
-        app.stage.addChild(
-          new Graphics()
-            .rect(unitX - 17.5, unitY + 12.5, 35, 30)
-            .fill(0xC0C9D0)
-        );
-
-        // 出口联络线
-        if (unit.objects[0].linkedExit) {
-          const linedExit = props.platform?.exits?.find(e => e.id === unit.objects[0].linkedExit)
-          if (linedExit) {
-            const exit_y = linedExit.av === 'Front' ? exit_front_y.value :
-              linedExit.av === 'Center' ? exit_center_y.value :
-                linedExit.av === 'Back' ? exit_back_y.value : exit_border_y.value;
-            app.stage.addChild(
-              new Graphics()
-                .rect(unitX - 3, Math.min(exit_y, unitY + 12.5), 6, Math.abs(exit_y - unitY + 12.5))
-                .fill(0xFFFFFF)
-            );
-            app.stage.addChild(
-              new Graphics()
-                .rect(unitX - 1, Math.min(exit_y, unitY + 12.5), 2, Math.abs(exit_y - unitY + 12.5))
-                .fill(0x000000)
-            );
-          }
-        }
+        const mask = new Graphics()
+          .rect(unitX - 17.5, unitY + 12.5, 35, 30)
+          .fill(0xC0C9D0)
+        obj.setMask({ mask: mask, inverse: true })
       } else {
-        const unitX = baseUnitX;
+        const unitX = getUnitX(unit.objects[0], centerUnitX, unitsLength / 2 / unitsNum);
         const unitY = unit.objects[0].av === 'Center' ? obj_center_y.value - 12.5 : obj_front_y.value - 12.5
         const needFlip = unit.objects[0].direction === 'Opposite' && arrowDirection.value === 'Right' || unit.objects[0].direction === 'Front' && arrowDirection.value === 'Left'
 
@@ -326,13 +353,9 @@ const drawScene = (loadedTextures?: any) => {
                 linedExit.av === 'Back' ? exit_back_y.value : exit_border_y.value;
             app.stage.addChild(
               new Graphics()
-                .rect(unitX - 3, Math.min(exit_y, unitY + 12.5), 6, Math.abs(exit_y - unitY + 12.5))
-                .fill(0xFFFFFF)
-            );
-            app.stage.addChild(
-              new Graphics()
-                .rect(unitX - 1, Math.min(exit_y, unitY + 12.5), 2, Math.abs(exit_y - unitY + 12.5))
+                .rect(unitX - 2, Math.min(exit_y, unitY), 4, Math.abs(exit_y - unitY))
                 .fill(0x000000)
+                .stroke({ width: 2, color: 0xFFFFFF })
             );
           }
         }
@@ -343,14 +366,128 @@ const drawScene = (loadedTextures?: any) => {
             : new Sprite(currentTextures.elevator);
         obj.anchor.set(0.5, 1);
         obj.x = unitX;
-        obj.y = unitY + 12.5;
+        obj.y = unitY + (unit.objects[0].type === 'Elevator' ? 12.5 : unit.objects[0].type === 'UpEscalator' ? 32.5 : 25);
         const aspect_ratio = obj.texture.width / obj.texture.height;
-        obj.width = 35;
+        obj.width = unit.objects[0].type === 'UpEscalator' ? 40 : 35;
         obj.height = obj.width / aspect_ratio;
         if (needFlip) {
           obj.scale.x *= -1
         }
         app.stage.addChild(obj)
+      }
+    } else if (unit.objects.length === 2) {
+      const unitX = getUnitX(unit.objects[0], centerUnitX, unitsLength / 2 / unitsNum);
+      if (unit.objects[0].type.startsWith('Down') && unit.objects[1].type.startsWith('Down')) {
+        const unitY = unit.objects[0].av === 'Center' ? obj_center_y.value - 12.5 : obj_front_y.value - 12.5
+        const needFlip = unit.objects[0].direction === 'Opposite' && arrowDirection.value === 'Right' || unit.objects[0].direction === 'Front' && arrowDirection.value === 'Left'
+        // 出口联络线
+        if (unit.objects[0].linkedExit) {
+          const linedExit = props.platform?.exits?.find(e => e.id === unit.objects[0].linkedExit)
+          if (linedExit) {
+            const exit_y = linedExit.av === 'Front' ? exit_front_y.value :
+              linedExit.av === 'Center' ? exit_center_y.value :
+                linedExit.av === 'Back' ? exit_back_y.value : exit_border_y.value;
+            app.stage.addChild(
+              new Graphics()
+                .rect(unitX - 2, Math.min(exit_y, unitY), 4, Math.abs(exit_y - unitY))
+                .fill(0x000000)
+                .stroke({ width: 2, color: 0xFFFFFF })
+            );
+          }
+        }
+
+        // 主体
+        app.stage.addChild(
+          new Graphics()
+            .rect(unitX - (needFlip ? 17.5 : 12.5), unitY - 30, 30, 42.5)
+            .fill(0x808080)
+        );
+        const obj_0 = unit.objects[isDoorOpen.value ? 0 : 1].type === 'DownStairs' ? new Sprite(currentTextures.downStairs) : new Sprite(currentTextures.downEscalator);
+        obj_0.anchor.set(0.5, 0);
+        obj_0.x = unitX;
+        obj_0.y = unitY - 12.5;
+        const aspect_ratio_0 = obj_0.texture.width / obj_0.texture.height;
+        obj_0.width = 35;
+        obj_0.height = obj_0.width / aspect_ratio_0;
+        if (unit.objects[isDoorOpen.value ? 0 : 1].type === 'DownEscalator') {
+          obj_0.width = 39;
+          obj_0.height = obj_0.width / aspect_ratio_0;
+          obj_0.x -= (needFlip ? -2 : 2);
+          obj_0.y -= 6;
+        }
+        if (needFlip) {
+          obj_0.scale.x *= -1
+        }
+        const obj_1 = unit.objects[isDoorOpen.value ? 1 : 0].type === 'DownStairs' ? new Sprite(currentTextures.downStairs) : new Sprite(currentTextures.downEscalator);
+        obj_1.anchor.set(0.5, 0);
+        obj_1.x = unitX;
+        obj_1.y = unitY - 30;
+        const aspect_ratio_1 = obj_1.texture.width / obj_1.texture.height;
+        obj_1.width = 35;
+        obj_1.height = obj_1.width / aspect_ratio_1;
+        if (unit.objects[isDoorOpen.value ? 1 : 0].type === 'DownEscalator') {
+          obj_1.width = 39;
+          obj_1.height = obj_1.width / aspect_ratio_1;
+          obj_1.x -= (needFlip ? -2 : 2);
+          obj_1.y -= 2;
+        }
+        if (needFlip) {
+          obj_1.scale.x *= -1
+        }
+        app.stage.addChild(obj_1);
+        app.stage.addChild(obj_0);
+        const mask = new Graphics()
+          .rect(unitX - 17.5, unitY + 12.5, 35, 30)
+          .fill(0xC0C9D0)
+        obj_0.setMask({ mask: mask, inverse: true })
+        obj_1.setMask({ mask: mask, inverse: true })
+      } else if (unit.objects[0].type.startsWith('Up') && unit.objects[1].type.startsWith('Up')) {
+        const unitY = unit.objects[0].av === 'Center' ? obj_center_y.value - 12.5 : obj_front_y.value - 12.5
+        const needFlip = unit.objects[0].direction === 'Opposite' && arrowDirection.value === 'Right' || unit.objects[0].direction === 'Front' && arrowDirection.value === 'Left'
+
+        // 出口联络线
+        if (unit.objects[0].linkedExit) {
+          const linedExit = props.platform?.exits?.find(e => e.id === unit.objects[0].linkedExit)
+          if (linedExit) {
+            const exit_y = linedExit.av === 'Front' ? exit_front_y.value :
+              linedExit.av === 'Center' ? exit_center_y.value :
+                linedExit.av === 'Back' ? exit_back_y.value : exit_border_y.value;
+            app.stage.addChild(
+              new Graphics()
+                .rect(unitX - 2, Math.min(exit_y, unitY), 4, Math.abs(exit_y - unitY))
+                .fill(0x000000)
+                .stroke({ width: 2, color: 0xFFFFFF })
+            );
+          }
+        }
+
+        // 主体
+        const obj_0 = unit.objects[isDoorOpen.value ? 0 : 1].type === 'UpStairs' ? new Sprite(currentTextures.upStairs) : new Sprite(currentTextures.upEscalator);
+        obj_0.anchor.set(0.5, 1);
+        obj_0.x = unitX;
+        obj_0.y = unitY + 25;
+        const aspect_ratio_0 = obj_0.texture.width / obj_0.texture.height;
+        obj_0.width = 35;
+        obj_0.height = obj_0.width / aspect_ratio_0;
+        if (needFlip) {
+          obj_0.scale.x *= -1
+        }
+        const obj_1 = unit.objects[isDoorOpen.value ? 1 : 0].type === 'UpStairs' ? new Sprite(currentTextures.upStairs) : new Sprite(currentTextures.upEscalator);
+        obj_1.anchor.set(0.5, 1);
+        obj_1.x = unitX;
+        obj_1.y = unitY + 10;
+        const aspect_ratio_1 = obj_1.texture.width / obj_1.texture.height;
+        obj_1.width = 35;
+        obj_1.height = obj_1.width / aspect_ratio_1;
+        if (unit.objects[isDoorOpen.value ? 1 : 0].type === 'UpEscalator') {
+          obj_1.anchor.set(0, 1);
+          obj_1.scale.x = 1
+        }
+        if (needFlip) {
+          obj_1.scale.x *= -1
+        }
+        app.stage.addChild(obj_1);
+        app.stage.addChild(obj_0);
       }
     }
   });
@@ -447,87 +584,206 @@ const drawScene = (loadedTextures?: any) => {
   app.stage.addChild(doorDirectionEng);
 
   // 门动画
+  const doorGradient = new FillGradient({
+    type: 'linear',
+    start: { x: 0, y: 0 },
+    end: { x: 0, y: 1 },
+    colorStops: [
+      { offset: 0, color: 'rgba(255,255,255,0.5)' },
+      { offset: 1, color: 'rgba(255,255,255,0)' },
+    ],
+  });
   const doorBase = new Graphics()
     .moveTo(135, 355)
     .lineTo(255, 355)
     .lineTo(275, 370)
     .lineTo(115, 370)
     .closePath()
-    .fill(0xC0C000);
+    .fill(0xC0C000)
+    .rect(135, 325, 120, 30)
+    .fill({ fill: doorGradient, })
   app.stage.addChild(doorBase);
 
   // 创建门容器 - 使用 Container 而不是 Graphics
   leftDoorContainer = new Container();
   rightDoorContainer = new Container();
 
-  // 左侧门主体 (银灰色)
+  // 左侧门主体 (银灰色) - 左上角圆角，中间镂空
+  const cornerRadius = 4;
+
+  // 窗口参数
+  const windowWidth = 40;
+  const windowHeight = 50;
+  const windowRadius = 4;
+
+  const leftWindowX = 135 + (60 - windowWidth) / 2;
+  const leftWindowY = 235 + (105 - windowHeight) / 2;
+  const rightWindowX = 195 + (60 - windowWidth) / 2;
+  const rightWindowY = 235 + (105 - windowHeight) / 2;
+
+  const leftDoorMask = new Graphics()
+    .roundRect(leftWindowX, leftWindowY, windowWidth, windowHeight, windowRadius)
+    .fill(0x000000);
   const leftDoorBody = new Graphics()
-    .rect(135, 250, 60, 105)
-    .fill(0xC0C9D0)
-    .stroke({ width: 1, color: 0x000000 });
+    .moveTo(135 + cornerRadius, 250) // 从左上角圆角后开始
+    .lineTo(195, 250) // 顶边到右上角
+    .lineTo(195, 355) // 右边到右下角
+    .lineTo(135, 355) // 底边到左下角
+    .lineTo(135, 250 + cornerRadius) // 左边到左上角圆角前
+    .arc(135 + cornerRadius, 250 + cornerRadius, cornerRadius, Math.PI, -Math.PI / 2) // 左上角圆角
+    .closePath()
+    .fill(0xE6EBF0)
+    .stroke({ width: 1, color: 0x000000 })
+    .roundRect(leftWindowX - 1, leftWindowY - 1, windowWidth + 2, windowHeight + 2, windowRadius)
+    .fill(0x000000)
+    .rect(190, 251, 4, 95)
+    .fill(0xD0D000)
+    .rect(135, 335, 60, 20)
+    .fill('rgba(128,128,128,0.3)')
+    .rect(135, 345, 60, 10)
+    .fill('rgba(0,0,0,0.3)');
+
+  leftDoorBody.setMask({ mask: leftDoorMask, inverse: true })
+
+  // 添加白色渐变效果（从左上到右下）
+  const windowGradient = new FillGradient({
+    type: 'linear',
+    start: { x: 0, y: 0 },
+    end: { x: 1, y: 1 },
+    colorStops: [
+      { offset: 0.4, color: 'rgba(255,255,255,0)' },
+      { offset: 1, color: 'rgba(255,255,255,1)' },
+    ],
+  });
+  const leftWindowGradient = new Graphics()
+    .roundRect(leftWindowX, leftWindowY, windowWidth, windowHeight, windowRadius)
+    .fill({ fill: windowGradient, });
+
+  leftDoorContainer.addChild(leftDoorMask);
   leftDoorContainer.addChild(leftDoorBody);
+  leftDoorContainer.addChild(leftWindowGradient);
 
   // 左侧箭头 (指向左)
   const leftArrow = new Graphics()
-    .moveTo(100, 317) // 箭头尖端
-    .lineTo(115, 307) // 上边
-    .lineTo(115, 312) // 中上
-    .lineTo(125, 312) // 右上
-    .lineTo(125, 322) // 右下
-    .lineTo(115, 322) // 中下
-    .lineTo(115, 327) // 下边
+    .moveTo(100, 307) // 箭头尖端
+    .lineTo(115, 297) // 上边
+    .lineTo(115, 302) // 中上
+    .lineTo(125, 302) // 右上
+    .lineTo(125, 312) // 右下
+    .lineTo(115, 312) // 中下
+    .lineTo(115, 317) // 下边
     .closePath()
     .fill(0xFFFFFF);
-  leftDoorContainer.addChild(leftArrow);
+  if (isDoorOpen.value) leftDoorContainer.addChild(leftArrow);
 
-  // 右侧门主体 (银灰色)
+  const rightDoorMask = new Graphics()
+    .roundRect(rightWindowX, rightWindowY, windowWidth, windowHeight, windowRadius)
+    .fill(0x000000);
+  // 右侧门主体 (银灰色) - 右上角圆角，中间镂空
   const rightDoorBody = new Graphics()
-    .rect(195, 250, 60, 105)
-    .fill(0xC0C9D0)
-    .stroke({ width: 1, color: 0x000000 });
+    .moveTo(195, 250) // 从左上角开始
+    .lineTo(255 - cornerRadius, 250) // 顶边到右上角圆角前
+    .arc(255 - cornerRadius, 250 + cornerRadius, cornerRadius, -Math.PI / 2, 0) // 右上角圆角
+    .lineTo(255, 355) // 右边到右下角
+    .lineTo(195, 355) // 底边到左下角
+    .lineTo(195, 250) // 左边回到起点
+    .closePath()
+    .fill(0xE6EBF0)
+    .stroke({ width: 1, color: 0x000000 })
+    .roundRect(rightWindowX - 1, rightWindowY - 1, windowWidth + 2, windowHeight + 2, windowRadius)
+    .fill(0x000000)
+    .rect(195, 251, 4, 95)
+    .fill(0xD0D000)
+    .rect(195, 335, 60, 20)
+    .fill('rgba(128,128,128,0.3)')
+    .rect(195, 345, 60, 10)
+    .fill('rgba(0,0,0,0.3)');
+
+  rightDoorBody.setMask({ mask: rightDoorMask, inverse: true })
+  const rightWindowGradient = new Graphics()
+    .roundRect(rightWindowX, rightWindowY, windowWidth, windowHeight, windowRadius)
+    .fill({ fill: windowGradient, });
+
+  rightDoorContainer.addChild(rightDoorMask);
   rightDoorContainer.addChild(rightDoorBody);
+  rightDoorContainer.addChild(rightWindowGradient);
 
   // 右侧箭头 (指向右)
   const rightArrow = new Graphics()
-    .moveTo(290, 317) // 箭头尖端
-    .lineTo(275, 307) // 上边
-    .lineTo(275, 312) // 中上
-    .lineTo(265, 312) // 左上
-    .lineTo(265, 322) // 左下
-    .lineTo(275, 322) // 中下
-    .lineTo(275, 327) // 下边
+    .moveTo(290, 307) // 箭头尖端
+    .lineTo(275, 297) // 上边
+    .lineTo(275, 302) // 中上
+    .lineTo(265, 302) // 左上
+    .lineTo(265, 312) // 左下
+    .lineTo(275, 312) // 中下
+    .lineTo(275, 317) // 下边
     .closePath()
     .fill(0xFFFFFF);
-  rightDoorContainer.addChild(rightArrow);
+  if (isDoorOpen.value) rightDoorContainer.addChild(rightArrow);
+
+  doorArrow = new Graphics()
+    .moveTo(195, 337)
+    .lineTo(166, 361)
+    .lineTo(224, 361)
+    .closePath()
+    .fill(0xFFFFFF)
+    .stroke({ width: 1, color: 0x000000 })
+    .moveTo(195, 340)
+    .lineTo(170, 360)
+    .lineTo(220, 360)
+    .closePath()
+    .fill(0xD00000)
+
+  doorArrow.y += 45
+
+  const doorClose = new Graphics()
+    .circle(195, 308, 30)
+    .fill(0xFFFFFF)
+    .stroke({ width: 1, color: 0x000000 })
+    .circle(195, 308, 25)
+    .fill(0xD00000)
+    .rect(177, 304, 36, 8)
+    .fill(0xFFFFFF)
 
   app.stage.addChild(leftDoorContainer);
   app.stage.addChild(rightDoorContainer);
+  if (isDoorOpen.value) app.stage.addChild(doorArrow);
+  else app.stage.addChild(doorClose);
+
+
 
   // 设置初始位置
   leftDoorContainer.x = 0;
   rightDoorContainer.x = 0;
 };
 
-let offset = 0
+let doorOffset = 0;
+let arrowOffset = 0;
 let waitTime = 0;
 
 // 门动画ticker函数
 const doorAnimationTicker = (ticker: Ticker) => {
   const max_offset = 40;
-  if (!leftDoorContainer || !rightDoorContainer) return;
-  if (props.enableAnimations && isDoorOpen.value && offset <= max_offset) {
-    if (offset !== max_offset) offset += 0.5 * ticker.deltaTime;
+  if (!leftDoorContainer || !rightDoorContainer || !doorArrow) return;
+  if (props.enableAnimations && isDoorOpen.value && doorOffset <= max_offset) {
+    if (doorOffset !== max_offset) doorOffset += 0.5 * ticker.deltaTime;
 
     // 左门向左移动，右门向右移动
-    leftDoorContainer.x = -Math.abs(offset);
-    rightDoorContainer.x = Math.abs(offset);
-    if (offset >= max_offset) {
-      offset = max_offset;
+    leftDoorContainer.x = -Math.abs(doorOffset);
+    rightDoorContainer.x = Math.abs(doorOffset);
+    doorArrow.y = 45 - arrowOffset;
+    if (doorOffset >= max_offset) {
+      doorOffset = max_offset;
+      if (arrowOffset < 45) {
+        arrowOffset += 2 * ticker.deltaTime;
+      } else {
+        arrowOffset = 45;
+      }
       waitTime += ticker.deltaTime;
-      console.log(waitTime)
       if (waitTime >= 100) {
         waitTime = 0;
-        offset = 0;
+        doorOffset = 0;
+        arrowOffset = 0;
       }
     }
   }

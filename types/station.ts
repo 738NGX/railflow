@@ -21,9 +21,9 @@ export interface StationNumbering {
 export interface PlatformObject {
   type: 'DownStairs' | 'UpStairs' | 'DownEscalator' | 'UpEscalator' | 'Elevator';
   direction: 'Front' | 'Opposite'
-  ah: 'Front' | 'Center' | 'Back';  // Horizontal alignment of the object
-  av: 'Front' | 'Center' | 'Back';  // Vertical alignment of the object
-  linkedExit: number | undefined; // Exit ID this object is linked to, if any
+  ah: 'Front' | 'Center' | 'Back' | `${'Front' | 'Back'}${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9}`     // Horizontal alignment of the object
+  av: 'Front' | 'Center' | 'Back';    // Vertical alignment of the object
+  linkedExit: number | undefined;     // Exit ID this object is linked to, if any
 }
 
 export interface ExitDisplay {
