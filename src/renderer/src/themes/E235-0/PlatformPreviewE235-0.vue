@@ -4,6 +4,7 @@ import { onMounted, onUnmounted, ref, computed, watch } from 'vue';
 import type { Platform, Exit, PlatformObject } from '../../../../../types/station';
 import { assetLoader } from '../../utils/assetLoader';
 import { SVG_ASSETS_ARRAY } from '../../utils/svgAssets';
+import { loadProjectFonts } from '../../utils/fontText';
 
 interface Props {
   platform?: Platform;
@@ -305,9 +306,10 @@ const drawScene = (loadedTextures?: any) => {
                 linedExit.av === 'Back' ? exit_back_y.value : exit_border_y.value;
             app.stage.addChild(
               new Graphics()
-                .rect(unitX - 2, Math.min(exit_y, unitY), 4, Math.abs(exit_y - unitY))
+                .rect(unitX - 3, Math.min(exit_y, unitY), 6, Math.abs(exit_y - unitY))
+                .fill(0xFFFFFF)
+                .rect(unitX - 1, Math.min(exit_y, unitY), 2, Math.abs(exit_y - unitY))
                 .fill(0x000000)
-                .stroke({ width: 2, color: 0xFFFFFF })
             );
           }
         }
@@ -353,9 +355,10 @@ const drawScene = (loadedTextures?: any) => {
                 linedExit.av === 'Back' ? exit_back_y.value : exit_border_y.value;
             app.stage.addChild(
               new Graphics()
-                .rect(unitX - 2, Math.min(exit_y, unitY), 4, Math.abs(exit_y - unitY))
+                .rect(unitX - 3, Math.min(exit_y, unitY), 6, Math.abs(exit_y - unitY))
+                .fill(0xFFFFFF)
+                .rect(unitX - 1, Math.min(exit_y, unitY), 2, Math.abs(exit_y - unitY))
                 .fill(0x000000)
-                .stroke({ width: 2, color: 0xFFFFFF })
             );
           }
         }
@@ -368,7 +371,7 @@ const drawScene = (loadedTextures?: any) => {
         obj.x = unitX;
         obj.y = unitY + (unit.objects[0].type === 'Elevator' ? 12.5 : unit.objects[0].type === 'UpEscalator' ? 32.5 : 25);
         const aspect_ratio = obj.texture.width / obj.texture.height;
-        obj.width = unit.objects[0].type === 'UpEscalator' ? 40 : 35;
+        obj.width = unit.objects[0].type === 'UpEscalator' ? 39 : 35;
         obj.height = obj.width / aspect_ratio;
         if (needFlip) {
           obj.scale.x *= -1
@@ -389,9 +392,10 @@ const drawScene = (loadedTextures?: any) => {
                 linedExit.av === 'Back' ? exit_back_y.value : exit_border_y.value;
             app.stage.addChild(
               new Graphics()
-                .rect(unitX - 2, Math.min(exit_y, unitY), 4, Math.abs(exit_y - unitY))
+                .rect(unitX - 3, Math.min(exit_y, unitY), 6, Math.abs(exit_y - unitY))
+                .fill(0xFFFFFF)
+                .rect(unitX - 1, Math.min(exit_y, unitY), 2, Math.abs(exit_y - unitY))
                 .fill(0x000000)
-                .stroke({ width: 2, color: 0xFFFFFF })
             );
           }
         }
@@ -454,20 +458,21 @@ const drawScene = (loadedTextures?: any) => {
                 linedExit.av === 'Back' ? exit_back_y.value : exit_border_y.value;
             app.stage.addChild(
               new Graphics()
-                .rect(unitX - 2, Math.min(exit_y, unitY), 4, Math.abs(exit_y - unitY))
+                .rect(unitX - 3, Math.min(exit_y, unitY), 6, Math.abs(exit_y - unitY))
+                .fill(0xFFFFFF)
+                .rect(unitX - 1, Math.min(exit_y, unitY), 2, Math.abs(exit_y - unitY))
                 .fill(0x000000)
-                .stroke({ width: 2, color: 0xFFFFFF })
             );
           }
         }
 
         // 主体
-        const obj_0 = unit.objects[isDoorOpen.value ? 0 : 1].type === 'UpStairs' ? new Sprite(currentTextures.upStairs) : new Sprite(currentTextures.upEscalator);
+        const obj_0 = unit.objects[isDoorOpen.value ? 0 : 1].type === 'UpStairs' ? new Sprite(currentTextures.upStairsSmall) : new Sprite(currentTextures.upEscalator);
         obj_0.anchor.set(0.5, 1);
         obj_0.x = unitX;
-        obj_0.y = unitY + 25;
+        obj_0.y = unitY + 32.5;
         const aspect_ratio_0 = obj_0.texture.width / obj_0.texture.height;
-        obj_0.width = 35;
+        obj_0.width = unit.objects[isDoorOpen.value ? 0 : 1].type === 'UpEscalator' ? 39 : 35;
         obj_0.height = obj_0.width / aspect_ratio_0;
         if (needFlip) {
           obj_0.scale.x *= -1
@@ -475,13 +480,12 @@ const drawScene = (loadedTextures?: any) => {
         const obj_1 = unit.objects[isDoorOpen.value ? 1 : 0].type === 'UpStairs' ? new Sprite(currentTextures.upStairs) : new Sprite(currentTextures.upEscalator);
         obj_1.anchor.set(0.5, 1);
         obj_1.x = unitX;
-        obj_1.y = unitY + 10;
+        obj_1.y = unitY + (unit.objects[isDoorOpen.value ? 1 : 0].type === 'UpStairs' ? 10 : 17.5);
         const aspect_ratio_1 = obj_1.texture.width / obj_1.texture.height;
-        obj_1.width = 35;
+        obj_1.width = unit.objects[isDoorOpen.value ? 1 : 0].type === 'UpEscalator' ? 39 : 35;
         obj_1.height = obj_1.width / aspect_ratio_1;
         if (unit.objects[isDoorOpen.value ? 1 : 0].type === 'UpEscalator') {
-          obj_1.anchor.set(0, 1);
-          obj_1.scale.x = 1
+          //
         }
         if (needFlip) {
           obj_1.scale.x *= -1
@@ -511,12 +515,11 @@ const drawScene = (loadedTextures?: any) => {
       const exitTextKanji = new Text({
         text: exitInfo?.name.kanji,
         x: exit_x + (exit.end - exit.start) / 2,
-        y: exit_y + 14,
+        y: exit_y + 13,
         style: {
           fill: '#000000',
           fontSize: 16,
-          fontFamily: 'Arial',
-          fontWeight: '300'
+          fontFamily: 'Meiryo',
         },
         anchor: 0.5
       });
@@ -527,9 +530,8 @@ const drawScene = (loadedTextures?: any) => {
         y: exit_y + 28,
         style: {
           fill: '#000000',
-          fontSize: 10,
-          fontFamily: 'Arial',
-          fontWeight: '100'
+          fontSize: 10.5,
+          fontFamily: 'Meiryo',
         },
         anchor: 0.5
       });
@@ -564,7 +566,7 @@ const drawScene = (loadedTextures?: any) => {
     style: {
       fill: '#ffffff',
       fontSize: 48,
-      fontFamily: 'Microsoft Sans Serif',
+      fontFamily: 'Meiryo UI',
     },
     anchor: 0.5
   });
@@ -577,7 +579,7 @@ const drawScene = (loadedTextures?: any) => {
     style: {
       fill: '#ffffff',
       fontSize: 24,
-      fontFamily: 'Microsoft Sans Serif',
+      fontFamily: 'Meiryo UI',
     },
     anchor: 0.5
   });
@@ -828,6 +830,7 @@ onMounted(async () => {
 
   // 使用全局资源管理器批量加载资源
   const loadedTextures = await assetLoader.loadMultipleTextures(SVG_ASSETS_ARRAY);
+  await loadProjectFonts();
 
   textures = loadedTextures
 

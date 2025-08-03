@@ -3,6 +3,7 @@
 
 import DownStairsUrl from '../themes/E235-0/SVG/DownStairs.svg?url';
 import UpStairsUrl from '../themes/E235-0/SVG/UpStairs.svg?url';
+import UpStairsSmallUrl from '../themes/E235-0/SVG/UpStairs_small.svg?url';
 import ElevatorUrl from '../themes/E235-0/SVG/Elevator.svg?url';
 import DownEscalatorUrl from '../themes/E235-0/SVG/DownEscalator.svg?url';
 import UpEscalatorUrl from '../themes/E235-0/SVG/UpEscalator.svg?url';
@@ -12,6 +13,7 @@ import MobilePhoneUrl from '../themes/E235-0/SVG/MobilePhone.svg?url';
 export const SVG_ASSETS = {
   downStairs: DownStairsUrl,
   upStairs: UpStairsUrl,
+  upStairsSmall: UpStairsSmallUrl,
   elevator: ElevatorUrl,
   downEscalator: DownEscalatorUrl,
   upEscalator: UpEscalatorUrl,
@@ -22,6 +24,7 @@ export const SVG_ASSETS = {
 export const SVG_ASSETS_ARRAY = [
   { path: 'downStairs', url: DownStairsUrl, key: 'downStairs' },
   { path: 'upStairs', url: UpStairsUrl, key: 'upStairs' },
+  { path: 'upStairsSmall', url: UpStairsSmallUrl, key: 'upStairsSmall' },
   { path: 'elevator', url: ElevatorUrl, key: 'elevator' },
   { path: 'downEscalator', url: DownEscalatorUrl, key: 'downEscalator' },
   { path: 'upEscalator', url: UpEscalatorUrl, key: 'upEscalator' },
