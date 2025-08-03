@@ -31,6 +31,7 @@ export interface ExitDisplay {
   start: number;  // Should start at which x, range is [0,  end)
   end: number;    // should end at which x, range is (start, 935]
   av: 'Front' | 'Center' | 'Back' | 'Border'; // Vertical alignment of the display
+  fontScale: number; // Font scale for the text
 }
 
 export interface Platform {

@@ -16,7 +16,7 @@
           <span>出口 {{ exit.id }}: {{ exit.name.kanji }}</span>
         </template>
         <el-form label-position="top">
-          <div class="grid grid-cols-3 gap-4">
+          <div class="grid grid-cols-2 gap-4">
             <el-form-item label="日文名称">
               <el-input
                 :model-value="exit.name.kanji"
@@ -27,12 +27,6 @@
               <el-input
                 :model-value="exit.name.english"
                 @input="updateExitName(exit.id, 'english', $event)"
-              />
-            </el-form-item>
-            <el-form-item label="中文名称">
-              <el-input
-                :model-value="exit.name.chinese || ''"
-                @input="updateExitName(exit.id, 'chinese', $event)"
               />
             </el-form-item>
           </div>
@@ -77,7 +71,6 @@ function addExit() {
     name: {
       kanji: '新出口',
       english: 'New Exit',
-      chinese: '新出口'
     }
   }
 

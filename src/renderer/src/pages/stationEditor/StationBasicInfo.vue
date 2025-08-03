@@ -23,31 +23,37 @@
             @input="updateName('chinese', $event)"
           />
         </el-form-item>
+        <el-form-item label="韩文名称">
+          <el-input
+            :model-value="station.name.korean || ''"
+            @input="updateName('korean', $event)"
+          />
+        </el-form-item>
         <el-form-item label="站点代码">
           <el-input
             :model-value="station.name.code || ''"
             @input="updateName('code', $event)"
           />
         </el-form-item>
+        <el-form-item label="更新时间">
+          <div class="flex gap-2">
+            <el-input-number
+              :model-value="station.update.year"
+              :min="2000"
+              :max="2100"
+              @change="updateTime('year', $event)"
+            />
+            <span>年</span>
+            <el-input-number
+              :model-value="station.update.month"
+              :min="1"
+              :max="12"
+              @change="updateTime('month', $event)"
+            />
+            <span>月</span>
+          </div>
+        </el-form-item>
       </div>
-      <el-form-item label="更新时间">
-        <div class="flex gap-2">
-          <el-input-number
-            :model-value="station.update.year"
-            :min="2000"
-            :max="2100"
-            @change="updateTime('year', $event)"
-          />
-          <span>年</span>
-          <el-input-number
-            :model-value="station.update.month"
-            :min="1"
-            :max="12"
-            @change="updateTime('month', $event)"
-          />
-          <span>月</span>
-        </div>
-      </el-form-item>
     </el-form>
   </el-card>
 </template>

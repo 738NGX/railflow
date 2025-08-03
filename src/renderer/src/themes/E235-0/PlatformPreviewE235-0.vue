@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { Application, Graphics, Text, Sprite, Container, Ticker, FillGradient } from 'pixi.js';
+import { Application, Graphics, Text, Sprite, Container, Ticker, FillGradient, SpriteOptions, Texture, TextureSource } from 'pixi.js';
 import { onMounted, onUnmounted, ref, computed, watch } from 'vue';
 import type { Platform, Exit, PlatformObject } from '../../../../../types/station';
 import { assetLoader } from '../../utils/assetLoader';
@@ -505,13 +505,17 @@ const drawPlatformObjects = (_config: RenderConfig, _pos: any, currentTextures: 
       drawSingleObject(unit.objects[0], centerUnitX, unitsLength / unitsNum / 2, currentTextures);
     } else if (unit.objects.length === 2) {
       drawDoubleObject(unit.objects, centerUnitX, unitsLength / unitsNum / 2, currentTextures);
+    } else if (unit.objects.length === 3) {
+      drawThreeObject(unit.objects, centerUnitX, unitsLength / unitsNum / 2, currentTextures);
+    } else {
+      //
     }
   });
 };
 
-const drawSingleObject = (obj: PlatformObject, centerUnitX: number, offset: number, currentTextures: any) => {
-  const unitX = getUnitX(obj, centerUnitX, offset);
-  const unitY = getObjectY(obj) - scaleValue(12.5);
+const drawSingleObject = (obj: PlatformObject, centerUnitX: number, offset: number, currentTextures: any, customUnitX?: number, customUnitY?: number) => {
+  const unitX = customUnitX ?? getUnitX(obj, centerUnitX, offset);
+  const unitY = customUnitY ?? getObjectY(obj) - scaleValue(12.5);
   const needFlip = shouldFlipObject(obj);
 
   // 绘制出口联络线
@@ -526,26 +530,64 @@ const drawSingleObject = (obj: PlatformObject, centerUnitX: number, offset: numb
   }
 };
 
-const drawDoubleObject = (objects: PlatformObject[], centerUnitX: number, offset: number, currentTextures: any) => {
-  const unitX = getUnitX(objects[0], centerUnitX, offset);
-  const unitY = getObjectY(objects[0]) - scaleValue(12.5);
+const drawDoubleObject = (objects: PlatformObject[], centerUnitX: number, offset: number, currentTextures: any, customUnitX?: number, customUnitY?: number) => {
+  const unitX = customUnitX ?? getUnitX(objects[0], centerUnitX, offset);
+  const unitY = customUnitY ?? getObjectY(objects[0]) - scaleValue(12.5);
   const needFlip = shouldFlipObject(objects[0]);
 
-  // 绘制出口联络线
-  if (objects[0].linkedExit) {
-    drawExitLink(objects[0], unitX, unitY);
-  }
 
   if (objects[0].type.startsWith('Down') && objects[1].type.startsWith('Down')) {
+    if (objects[0].linkedExit) {
+      drawExitLink(objects[0], unitX, unitY);
+    }
+    if (objects[1].linkedExit) {
+      drawExitLink(objects[1], unitX, unitY);
+    }
     drawDoubleDownObject(objects, unitX, unitY, needFlip, currentTextures);
   } else if (objects[0].type.startsWith('Up') && objects[1].type.startsWith('Up')) {
+    if (objects[0].linkedExit) {
+      drawExitLink(objects[0], unitX, unitY);
+    }
+    if (objects[1].linkedExit) {
+      drawExitLink(objects[1], unitX, unitY);
+    }
     drawDoubleUpObject(objects, unitX, unitY, needFlip, currentTextures);
+  } else if (objects[0].type === 'Elevator') {
+    drawSingleObject(objects[0], centerUnitX, offset, currentTextures, unitX, scaleValue(isDoorOpen.value ? 155 : 105))
+    drawSingleObject(objects[1], centerUnitX, offset, currentTextures, unitX, scaleValue(isDoorOpen.value ? 100 : 145))
+  } else if (objects[1].type === 'Elevator') {
+    drawSingleObject(objects[1], centerUnitX, offset, currentTextures, unitX, scaleValue(isDoorOpen.value ? 155 : 105))
+    drawSingleObject(objects[0], centerUnitX, offset, currentTextures, unitX, scaleValue(isDoorOpen.value ? 100 : 145))
+  } else {
+    //
+  }
+};
+
+const drawThreeObject = (objects: PlatformObject[], centerUnitX: number, offset: number, currentTextures: any) => {
+  const unitX = getUnitX(objects[0], centerUnitX, offset);
+
+  if (objects[0].type === 'Elevator') {
+    drawSingleObject(objects[0], centerUnitX, offset, currentTextures, unitX, scaleValue(isDoorOpen.value ? 155 : 95))
+    if (
+      objects[1].type.startsWith('Down') && objects[2].type.startsWith('Down') ||
+      objects[1].type.startsWith('Up') && objects[2].type.startsWith('Up')
+    ) {
+      drawDoubleObject(objects.slice(1), centerUnitX, offset, currentTextures, unitX, scaleValue(isDoorOpen.value ? 100 : 155));
+    }
+  } else if (objects[2].type === 'Elevator') {
+    drawSingleObject(objects[2], centerUnitX, offset, currentTextures, unitX, scaleValue(isDoorOpen.value ? 155 : 100))
+    if (
+      objects[0].type.startsWith('Down') && objects[1].type.startsWith('Down') ||
+      objects[0].type.startsWith('Up') && objects[1].type.startsWith('Up')
+    ) {
+      drawDoubleObject(objects.slice(0, 2), centerUnitX, offset, currentTextures, unitX, scaleValue(isDoorOpen.value ? 100 : 155));
+    }
   }
 };
 
 const shouldFlipObject = (obj: PlatformObject): boolean => {
   return (obj.direction === 'Opposite' && arrowDirection.value === 'Right') ||
-         (obj.direction === 'Front' && arrowDirection.value === 'Left');
+    (obj.direction === 'Front' && arrowDirection.value === 'Left');
 };
 
 const drawExitLink = (obj: PlatformObject, unitX: number, unitY: number) => {
@@ -635,7 +677,8 @@ const drawDoubleDownObject = (objects: PlatformObject[], unitX: number, unitY: n
 };
 
 const drawDoubleUpObject = (objects: PlatformObject[], unitX: number, unitY: number, needFlip: boolean, currentTextures: any) => {
-  const obj0 = createObjectSprite(objects[isDoorOpen.value ? 0 : 1], currentTextures, needFlip);
+  console.log('drawDoubleUpObject', objects, unitX, unitY, needFlip);
+  const obj0 = createObjectSprite(objects[isDoorOpen.value ? 0 : 1], currentTextures, needFlip, true);
   const obj1 = createObjectSprite(objects[isDoorOpen.value ? 1 : 0], currentTextures, needFlip);
 
   obj0.x = unitX;
@@ -647,8 +690,8 @@ const drawDoubleUpObject = (objects: PlatformObject[], unitX: number, unitY: num
   app.stage.addChild(obj0);
 };
 
-const createObjectSprite = (obj: PlatformObject, currentTextures: any, needFlip: boolean): Sprite => {
-  let texture;
+const createObjectSprite = (obj: PlatformObject, currentTextures: any, needFlip: boolean, needSmall: boolean = false): Sprite => {
+  let texture: SpriteOptions | Texture<TextureSource<any>> | undefined;
   switch (obj.type) {
     case 'DownStairs': texture = currentTextures.downStairs; break;
     case 'DownEscalator': texture = currentTextures.downEscalator; break;
@@ -657,6 +700,7 @@ const createObjectSprite = (obj: PlatformObject, currentTextures: any, needFlip:
     case 'Elevator': texture = currentTextures.elevator; break;
     default: texture = currentTextures.upStairs; break;
   }
+  if (needSmall && obj.type === 'UpStairs') texture = currentTextures.upStairsSmall;
 
   const sprite = new Sprite(texture);
   sprite.anchor.set(0.5, obj.type.startsWith('Down') ? 0 : 1);
@@ -698,12 +742,12 @@ const drawExits = (config: RenderConfig) => {
         text: exitInfo.name.kanji,
         style: {
           fill: '#000000',
-          fontSize: scaleValue(text.exit.kanji.fontSize),
+          fontSize: scaleValue(text.exit.kanji.fontSize * exit.fontScale),
           fontFamily: text.exit.kanji.fontFamily,
         }
       });
       kanjiText.x = exitX + exitWidth / 2;
-      kanjiText.y = exitY + scaleValue(13);
+      kanjiText.y = exitY + scaleValue(8 + exit.fontScale * 4);
       kanjiText.anchor.set(0.5);
       app.stage.addChild(kanjiText);
 
@@ -711,12 +755,12 @@ const drawExits = (config: RenderConfig) => {
         text: exitInfo.name.english,
         style: {
           fill: '#000000',
-          fontSize: scaleValue(text.exit.english.fontSize),
+          fontSize: scaleValue(text.exit.english.fontSize * exit.fontScale),
           fontFamily: text.exit.english.fontFamily,
         }
       });
       englishText.x = exitX + exitWidth / 2;
-      englishText.y = exitY + scaleValue(28);
+      englishText.y = exitY + scaleValue(12 + exit.fontScale * 16);
       englishText.anchor.set(0.5);
       app.stage.addChild(englishText);
     }

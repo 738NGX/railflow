@@ -137,7 +137,7 @@
               </el-button>
             </div>
 
-            <div class="grid grid-cols-[2fr_1fr_1fr_1fr] gap-2 mb-3">
+            <div class="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-2 mb-3">
               <el-form-item label="关联出口">
                 <el-select
                   :model-value="exitDisplay.id"
@@ -152,7 +152,7 @@
                 </el-select>
               </el-form-item>
 
-              <el-form-item label="显示起始X坐标(0-936)">
+              <el-form-item label="起始X坐标">
                 <el-input-number
                   :model-value="exitDisplay.start"
                   :min="0"
@@ -162,13 +162,24 @@
                 />
               </el-form-item>
 
-              <el-form-item label="显示结束X坐标(0-936)">
+              <el-form-item label="结束X坐标">
                 <el-input-number
                   :model-value="exitDisplay.end"
                   :min="exitDisplay.start + 1"
                   :max="935"
                   class="!w-full"
                   @update:model-value="updateExitDisplayEnd(exitIndex, $event)"
+                />
+              </el-form-item>
+
+              <el-form-item label="文字尺寸">
+                <el-input-number
+                  :model-value="exitDisplay.fontScale"
+                  :min="0.1"
+                  :max="3"
+                  :step="0.1"
+                  class="!w-full"
+                  @update:model-value="updateExitDisplayFontScale(exitIndex, $event)"
                 />
               </el-form-item>
 
@@ -422,8 +433,9 @@ function addExitDisplay() {
   const newExitDisplay: ExitDisplay = {
     id: props.exits && props.exits.length > 0 ? props.exits[0].id : 1,
     start: 0,
-    end: 935, // 默认覆盖整个画布宽度
-    av: 'Border'
+    end: 935,
+    av: 'Border',
+    fontScale: 1
   }
 
   const updatedPlatform = {
@@ -470,6 +482,18 @@ function updateExitDisplayEnd(exitIndex: number, end: number | undefined) {
     ...props.platform,
     exits: (props.platform.exits || []).map((exitDisplay, index) =>
       index === exitIndex ? { ...exitDisplay, end } : exitDisplay
+    )
+  }
+  emit('update', updatedPlatform)
+}
+
+function updateExitDisplayFontScale(exitIndex: number, fontScale: number | undefined) {
+  if (fontScale === undefined) return
+
+  const updatedPlatform = {
+    ...props.platform,
+    exits: (props.platform.exits || []).map((exitDisplay, index) =>
+      index === exitIndex ? { ...exitDisplay, fontScale } : exitDisplay
     )
   }
   emit('update', updatedPlatform)
