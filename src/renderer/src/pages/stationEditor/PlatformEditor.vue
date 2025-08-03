@@ -79,8 +79,7 @@
         :screen-side="previewScreenSide"
         :car-number-direction="previewCarNumberDirection"
         :current-car-number="previewCurrentCarNumber"
-        :enable-animations="enablePreviewAnimations"
-        :show-debug-info="showDebugInfo"
+        :canvas-width="1920"
         @object-click="handleObjectClick"
         @object-hover="handleObjectHover"
       />
@@ -365,10 +364,6 @@ const emit = defineEmits<Emits>()
 
 // 车型选择相关
 const selectedTrainType = ref<string>('E235-0')
-
-// 预览配置
-const enablePreviewAnimations = ref(true)
-const showDebugInfo = ref(false)
 
 // 预览控制变量
 const previewScreenSide = ref<'Left' | 'Right'>('Left')
